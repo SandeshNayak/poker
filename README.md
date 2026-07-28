@@ -29,39 +29,52 @@ required for local dev. It listens on `process.env.PORT || 3000` at host
 
 ## Deploy to Vercel (primary)
 
-The `api/` functions are stateless; all room state is stored in Upstash Redis.
-You need a free Upstash database and its two REST credentials.
+The `api/` functions are stateless; all room state lives in an external store.
+**Two backends are supported and auto-detected** — connect *either* one in your
+Vercel project and it just works (no code change):
 
-1. **Create a free Redis database.** Easiest path — in your Vercel project:
-   **Storage** → **Create Database** → **Upstash Redis** (Marketplace). Vercel
-   auto-injects `KV_REST_API_URL` and `KV_REST_API_TOKEN` (or the
-   `UPSTASH_REDIS_REST_*` pair) into the project. The store reads either name
-   pair, so no code change is needed.
+| Backend | Env vars it sets | Notes |
+|---|---|---|
+| **Upstash Redis / Vercel KV** (recommended) | `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN`, or `KV_REST_API_URL` + `KV_REST_API_TOKEN` | Fast (~10-50ms), supports TTL (idle rooms auto-expire in 6h). |
+| **Vercel Blob** | `BLOB_READ_WRITE_TOKEN` and/or `BLOB_STORE_ID` | Works, but slower (each poll is a consistent object read) and has **no TTL** — abandoned room blobs persist until removed. |
 
-   Alternatively, sign up at https://upstash.com, create a Redis database, copy
-   its **REST URL** and **REST TOKEN**, and add them as Vercel environment
-   variables named `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`.
+The store prefers Blob if a Blob store is connected, else Redis. Force one with
+`STORAGE_DRIVER=blob` or `STORAGE_DRIVER=redis`.
 
-2. **Deploy** (from the project root):
+### Option A — Redis (recommended)
+
+In your Vercel project: **Storage** → **Create Database** → **Upstash Redis**
+(Marketplace) → connect it to this project. Vercel injects the credentials
+automatically.
+
+### Option B — Vercel Blob
+
+In your Vercel project: **Storage** → **Create Database** → **Blob** → set access
+to **Private** → connect it to this project. Vercel injects `BLOB_READ_WRITE_TOKEN`
+/ `BLOB_STORE_ID` automatically. (For a public store, also set
+`BLOB_ACCESS=public`; private is the default and recommended.)
+
+### Then
+
+1. **Redeploy** so the functions pick up the new env vars (env vars only load at
+   deploy time):
 
    ```bash
-   npx vercel        # preview
-   npx vercel --prod # production
+   npx vercel --prod
    ```
 
-   Or connect the GitHub repo in the Vercel dashboard and it deploys on push.
+   Or, if the GitHub repo is connected, use **Deployments → ⋯ → Redeploy**.
 
-3. Open the deployment URL. Share the invite link (includes `?room=...`) with
-   your team.
+2. Open the deployment URL and share the invite link (includes `?room=...`).
 
 ### Notes
 
-- If the env vars are missing, the API returns **503** with a clear message
+- If no store is connected, the API returns **503** with a clear message
   ("Storage not configured…") instead of a generic crash.
-- State auto-expires: idle rooms are removed after 6 hours (Redis TTL), and
-  players who stop polling for 30s are pruned from their room.
+- Players who stop polling for 30s are pruned from their room. With Redis, idle
+  rooms also auto-expire after 6h; with Blob there is no TTL.
 - There are **no WebSockets** on Vercel — the client polls every 1.5s, which is
-  well within the free tier for small estimation groups.
+  fine for small estimation groups.
 
 ---
 
