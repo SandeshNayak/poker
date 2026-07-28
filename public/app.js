@@ -45,7 +45,14 @@
 
   // ------------------------------------------------------------------
   // Player id: the server has no socket id, so the client owns identity.
-  // Generate one once and persist it in localStorage; reuse on reload.
+  //
+  // IMPORTANT: this MUST be per-tab, not per-browser. localStorage is shared
+  // across every tab of the same browser, so if the id lived there, opening
+  // the app in two tabs would give both the SAME playerId — the second join
+  // would overwrite the first player's record (and could steal the host).
+  // sessionStorage is scoped to a single tab and survives reloads within it,
+  // so each tab (and each device) gets a distinct player. We also key it by
+  // roomId so switching rooms in one tab yields a fresh identity.
   // ------------------------------------------------------------------
   function generatePlayerId() {
     var chars = "abcdefghijklmnopqrstuvwxyz0123456789";
@@ -56,17 +63,18 @@
     return id;
   }
 
-  function getOrCreatePlayerId() {
+  function getOrCreatePlayerId(roomIdForKey) {
+    var storageKey = PLAYER_ID_STORAGE_KEY + "." + roomIdForKey;
     var id = null;
     try {
-      id = window.localStorage.getItem(PLAYER_ID_STORAGE_KEY);
+      id = window.sessionStorage.getItem(storageKey);
     } catch (e) {
-      /* localStorage unavailable — ignore */
+      /* sessionStorage unavailable — ignore */
     }
     if (!id) {
       id = generatePlayerId();
       try {
-        window.localStorage.setItem(PLAYER_ID_STORAGE_KEY, id);
+        window.sessionStorage.setItem(storageKey, id);
       } catch (e) {
         /* ignore */
       }
@@ -75,11 +83,20 @@
   }
 
   var roomId = getOrCreateRoomId();
-  var playerId = getOrCreatePlayerId();
+  var playerId = getOrCreatePlayerId(roomId);
   var selfId = playerId;
   var selectedVote = null;
   var latestState = null;
   var pollTimer = null;
+
+  // Remembered join details so a client that gets dropped from the room can
+  // silently re-join (see startPolling's self-heal). `hasJoined` gates this so
+  // we never re-join before the user has actually joined once.
+  var hasJoined = false;
+  var joinName = "";
+  var joinIsSpectator = false;
+  // Avoid firing overlapping re-join requests while one is in flight.
+  var rejoinInFlight = false;
 
   // ------------------------------------------------------------------
   // DOM references
@@ -192,11 +209,42 @@
         .then(function (state) {
           latestState = state;
           render(state);
+          maybeRejoin(state);
         })
         .catch(function () {
           /* transient network/error — ignore and try again next tick */
         });
     }, POLL_INTERVAL_MS);
+  }
+
+  // ------------------------------------------------------------------
+  // Self-heal: if we've joined but the server's player list no longer
+  // contains us, silently re-join. This covers two cases the storage fix
+  // alone doesn't fully close:
+  //   1. A concurrent, non-atomic write on the backend (two devices joining
+  //      within ~200ms) that dropped our record on a last-write-wins save.
+  //   2. Our room key expiring/being pruned while the tab was idle.
+  // Re-joining reinstates our player entry within one poll (~1.5s).
+  // ------------------------------------------------------------------
+  function maybeRejoin(state) {
+    if (!hasJoined || rejoinInFlight) {
+      return;
+    }
+    var players = (state && state.players) || [];
+    var present = players.some(function (p) {
+      return p.id === selfId;
+    });
+    if (present) {
+      return;
+    }
+    rejoinInFlight = true;
+    apiAction("join", { name: joinName, isSpectator: joinIsSpectator })
+      .then(function () {
+        rejoinInFlight = false;
+      })
+      .catch(function () {
+        rejoinInFlight = false;
+      });
   }
 
   joinForm.addEventListener("submit", function (event) {
@@ -216,6 +264,11 @@
     apiAction("join", { name: name, isSpectator: isSpectator }).then(function (data) {
       if (data.ok) {
         selfId = playerId;
+        // Remember join details so polling can silently re-join if we ever
+        // fall out of the room's player list (see maybeRejoin).
+        hasJoined = true;
+        joinName = name;
+        joinIsSpectator = isSpectator;
         joinModal.classList.add("hidden");
         appRoot.classList.remove("hidden");
         setupInviteUrl();
@@ -297,6 +350,9 @@
       } catch (e) {
         /* ignore */
       }
+      // Keep the remembered join name in sync so a self-heal re-join
+      // (maybeRejoin) uses the current name, not the original one.
+      joinName = name;
       apiAction("changeName", { name: name });
     }, 500);
   });
