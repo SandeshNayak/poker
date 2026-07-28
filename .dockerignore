@@ -1,0 +1,16 @@
+node_modules
+npm-debug.log
+.git
+.gitignore
+.env
+.env.*
+*.md
+Dockerfile
+.dockerignore
+fly.toml
+render.yaml
+
+# Scratch data from an unrelated session — NOT part of the app. Never ship.
+deliv.json
+bids/
+bots/

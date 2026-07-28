@@ -1,0 +1,10 @@
+node_modules/
+.env
+.env.*
+*.log
+.DS_Store
+
+# Scratch data from an unrelated session — NOT part of the app. Never publish.
+deliv.json
+bids/
+bots/

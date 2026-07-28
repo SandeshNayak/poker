@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Planning Poker</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+
+  <!-- Toast / error notifications -->
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+  <!-- Name entry modal -->
+  <div id="join-modal" class="modal-overlay">
+    <div class="modal-card">
+      <h1 class="modal-title">🃏 Planning Poker</h1>
+      <p class="modal-subtitle">Enter your name to join the estimation session.</p>
+      <form id="join-form">
+        <label class="field-label" for="name-input">Your name</label>
+        <input
+          type="text"
+          id="name-input"
+          class="text-input"
+          placeholder="e.g. Ada Lovelace"
+          maxlength="40"
+          autocomplete="name"
+          required
+        />
+
+        <label class="checkbox-row">
+          <input type="checkbox" id="spectator-input" />
+          <span>Join as spectator (watch only, no voting)</span>
+        </label>
+
+        <button type="submit" class="btn btn-primary btn-block">Join session</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Main app -->
+  <div id="app" class="app hidden">
+    <header class="app-header">
+      <div class="brand">
+        <span class="brand-emoji">🃏</span>
+        <span class="brand-name">Planning Poker</span>
+      </div>
+
+      <div class="invite-row">
+        <input id="invite-url" class="invite-input" type="text" readonly />
+        <button id="copy-link-btn" class="btn btn-secondary">Copy invite link</button>
+      </div>
+
+      <div class="user-row">
+        <span class="user-label">You are</span>
+        <input id="change-name-input" class="text-input text-input-inline" maxlength="40" />
+        <span id="spectator-tag" class="tag tag-spectator hidden">Spectator</span>
+      </div>
+    </header>
+
+    <div class="content-row">
+    <main class="main-content">
+      <section class="topic-section">
+        <label class="field-label" for="topic-input">Story / topic</label>
+        <input
+          id="topic-input"
+          class="text-input topic-input"
+          type="text"
+          placeholder="What are we estimating?"
+        />
+      </section>
+
+      <section class="table-section">
+        <div id="players-grid" class="players-grid"></div>
+      </section>
+
+      <section id="stats-section" class="stats-section hidden">
+        <div class="stats-grid">
+          <div class="stat-box">
+            <span class="stat-value" id="stat-average">-</span>
+            <span class="stat-label">Average</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-value" id="stat-mode">-</span>
+            <span class="stat-label">Mode</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-value" id="stat-count">-</span>
+            <span class="stat-label">Votes</span>
+          </div>
+        </div>
+        <div id="agreement-badge" class="agreement-badge hidden">✔ Agreement!</div>
+      </section>
+
+      <section class="controls-section">
+        <button id="reveal-btn" class="btn btn-primary">Reveal cards</button>
+        <button id="reset-btn" class="btn btn-secondary">New round</button>
+        <p id="host-hint" class="host-hint hidden">Only the host can reveal cards and start new rounds.</p>
+      </section>
+
+      <section id="deck-section" class="deck-section">
+        <div id="deck" class="deck"></div>
+      </section>
+    </main>
+
+    <aside id="history-panel" class="history-panel">
+      <div class="history-header">
+        <h2 class="history-title">📜 Round history</h2>
+        <span id="history-count" class="history-count">0</span>
+      </div>
+      <p id="history-empty" class="history-empty">
+        No rounds yet. Revealed rounds will appear here.
+      </p>
+      <ol id="history-list" class="history-list"></ol>
+    </aside>
+    </div>
+
+    <footer class="app-footer">
+      Planning Poker — built for scrum estimation
+    </footer>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

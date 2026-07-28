@@ -1,0 +1,19 @@
+# Render Blueprint for Planning Poker
+# Docs: https://render.com/docs/blueprint-spec
+#
+# Deploy via the Render dashboard: New -> Blueprint -> select this repo.
+# Uses the native Node runtime (not Docker) for simplicity; Render's
+# free web services support WebSockets out of the box.
+
+services:
+  - type: web
+    name: planning-poker
+    env: node
+    plan: free
+    region: oregon
+    buildCommand: npm install
+    startCommand: node server.js
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_VERSION
+        value: 20

@@ -1,0 +1,33 @@
+# fly.toml app configuration file for Planning Poker
+#
+# NOTE: Fly app names are globally unique. If `fly deploy` / `fly apps create`
+# reports "pointing-poker" is unavailable, change `app` below to something like
+# "pointing-poker-rp" (your URL becomes https://<app>.fly.dev).
+
+app = "pointing-poker"
+primary_region = "iad"
+
+[build]
+
+[env]
+  PORT = "3000"
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ["app"]
+
+  [[http_service.http_checks]]
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "10s"
+    method = "GET"
+    path = "/healthz"
+    protocol = "http"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"
