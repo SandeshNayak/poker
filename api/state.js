@@ -4,13 +4,15 @@
  * GET /api/state?roomId=...&playerId=...
  *
  * Polling endpoint used by the client to read the latest room state.
- * `playerId` is optional — when present we "touch" that player's
+ * `playerId` is optional — when present the store "touches" that player's
  * lastSeen so they aren't pruned as stale while they're actively polling.
+ *
+ * The store is backed by Upstash Redis (see lib/store.js), so calls are async.
  */
 
 const store = require('../lib/store');
 
-module.exports = (req, res) => {
+module.exports = async (req, res) => {
   // Always return fresh data; this is a polling endpoint.
   res.setHeader('Cache-Control', 'no-store');
 
@@ -21,8 +23,11 @@ module.exports = (req, res) => {
     return;
   }
 
-  // touch() is a safe no-op when playerId is undefined or unknown.
-  store.touch(roomId, playerId);
-
-  res.status(200).json(store.publicState(roomId));
+  try {
+    const state = await store.getState(roomId, playerId);
+    res.status(200).json(state);
+  } catch (err) {
+    const status = err && err.code === 'NO_STORAGE' ? 503 : 500;
+    res.status(status).json({ error: err && err.message ? err.message : 'Internal error' });
+  }
 };

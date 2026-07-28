@@ -82,14 +82,17 @@ module.exports = async (req, res) => {
       return;
     }
 
-    const result = action(roomId, playerId, body);
+    // Store mutations are async (Upstash Redis) and return the fresh state
+    // alongside the result, so the client re-renders in a single round trip.
+    const result = await action(roomId, playerId, body);
 
     res.status(200).json({
       ok: result.ok,
       error: result.ok ? undefined : result.error,
-      state: store.publicState(roomId),
+      state: result.state,
     });
   } catch (err) {
-    res.status(500).json({ error: 'Server error' });
+    const status = err && err.code === 'NO_STORAGE' ? 503 : 500;
+    res.status(status).json({ error: err && err.message ? err.message : 'Server error' });
   }
 };

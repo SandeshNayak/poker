@@ -1,0 +1,10 @@
+# The Socket.IO server is for persistent hosts (Render/Fly), NOT Vercel.
+# Vercel would try to compile it as a serverless function and fail
+# ("Invalid export found in module server.js"), so exclude it here.
+server.js
+
+# Non-Vercel deploy configs (harmless, but no reason to upload them).
+Dockerfile
+.dockerignore
+fly.toml
+render.yaml

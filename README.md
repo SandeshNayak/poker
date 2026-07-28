@@ -1,7 +1,16 @@
 # Planning Poker
 
-Realtime Planning Poker app built with Express + Socket.IO. Because it uses
-WebSockets, it needs a persistent host — **not** a static site host.
+A Planning Poker (scrum estimation) web app. It ships in **two forms** that
+share the same UI (`public/`):
+
+- **Vercel (serverless):** the client polls `GET /api/state` and posts moves to
+  `POST /api/action`. Room state lives in **Upstash Redis** so it can be shared
+  across serverless functions and survive cold starts. This is the default
+  deploy target — see below.
+- **Persistent host (Render / Fly):** the original `server.js` uses Express +
+  Socket.IO (WebSockets) with in-memory state. Used for local dev and any
+  always-on host. `server.js` is excluded from the Vercel build via
+  `.vercelignore`.
 
 ## Local development
 
@@ -12,7 +21,47 @@ npm start
 
 Open http://localhost:3000
 
-The server listens on `process.env.PORT || 3000` at host `0.0.0.0`.
+This runs the Socket.IO server (`server.js`) with in-memory state — no Redis
+required for local dev. It listens on `process.env.PORT || 3000` at host
+`0.0.0.0`.
+
+---
+
+## Deploy to Vercel (primary)
+
+The `api/` functions are stateless; all room state is stored in Upstash Redis.
+You need a free Upstash database and its two REST credentials.
+
+1. **Create a free Redis database.** Easiest path — in your Vercel project:
+   **Storage** → **Create Database** → **Upstash Redis** (Marketplace). Vercel
+   auto-injects `KV_REST_API_URL` and `KV_REST_API_TOKEN` (or the
+   `UPSTASH_REDIS_REST_*` pair) into the project. The store reads either name
+   pair, so no code change is needed.
+
+   Alternatively, sign up at https://upstash.com, create a Redis database, copy
+   its **REST URL** and **REST TOKEN**, and add them as Vercel environment
+   variables named `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`.
+
+2. **Deploy** (from the project root):
+
+   ```bash
+   npx vercel        # preview
+   npx vercel --prod # production
+   ```
+
+   Or connect the GitHub repo in the Vercel dashboard and it deploys on push.
+
+3. Open the deployment URL. Share the invite link (includes `?room=...`) with
+   your team.
+
+### Notes
+
+- If the env vars are missing, the API returns **503** with a clear message
+  ("Storage not configured…") instead of a generic crash.
+- State auto-expires: idle rooms are removed after 6 hours (Redis TTL), and
+  players who stop polling for 30s are pruned from their room.
+- There are **no WebSockets** on Vercel — the client polls every 1.5s, which is
+  well within the free tier for small estimation groups.
 
 ---
 
