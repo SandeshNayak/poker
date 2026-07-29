@@ -30,10 +30,16 @@
     return id;
   }
 
+  // Whether this visitor arrived on a bare URL (no ?room=) — i.e. they are
+  // CREATING/hosting a new session — vs. following an invite link to JOIN an
+  // existing one. Captured before we backfill the room id into the URL.
+  var isCreatingSession = false;
+
   function getOrCreateRoomId() {
     var params = new URLSearchParams(window.location.search);
     var roomId = params.get("room");
     if (!roomId) {
+      isCreatingSession = true;
       roomId = generateRoomId();
       params.set("room", roomId);
       var newUrl =
@@ -105,6 +111,8 @@
   var joinForm = document.getElementById("join-form");
   var nameInput = document.getElementById("name-input");
   var spectatorInput = document.getElementById("spectator-input");
+  var modalSubtitle = document.getElementById("modal-subtitle");
+  var joinSubmitBtn = document.getElementById("join-submit-btn");
 
   var appRoot = document.getElementById("app");
   var inviteUrlInput = document.getElementById("invite-url");
@@ -162,6 +170,21 @@
   }
   if (savedName) {
     nameInput.value = savedName;
+  }
+
+  // Tailor the start screen to the visitor's role: the person on a bare URL is
+  // CREATING (hosting) a new session; anyone following an invite link is
+  // JOINING an existing one. The host then shares the invite link so others
+  // can join.
+  if (modalSubtitle && joinSubmitBtn) {
+    if (isCreatingSession) {
+      modalSubtitle.textContent =
+        "Enter your name to create a session. You'll be the host — share the invite link so others can join.";
+      joinSubmitBtn.textContent = "Create session";
+    } else {
+      modalSubtitle.textContent = "Enter your name to join the estimation session.";
+      joinSubmitBtn.textContent = "Join session";
+    }
   }
 
   // ------------------------------------------------------------------
@@ -370,6 +393,12 @@
   // ------------------------------------------------------------------
   // Deck (voting cards)
   // ------------------------------------------------------------------
+  function castVote(value) {
+    selectedVote = value;
+    apiAction("vote", { value: value });
+    highlightSelectedDeckCard();
+  }
+
   function buildDeck() {
     clearChildren(deckEl);
     DECK_VALUES.forEach(function (value, index) {
@@ -381,23 +410,60 @@
       // Staggered entrance so the deck "deals" in on load.
       btn.style.animationDelay = index * 0.03 + "s";
       btn.addEventListener("click", function () {
-        selectedVote = value;
-        apiAction("vote", { value: value });
-        highlightSelectedDeckCard();
+        castVote(value);
       });
       deckEl.appendChild(btn);
     });
+
+    // Custom value entry — type any number/label and press Enter to cast it.
+    var custom = document.createElement("form");
+    custom.className = "deck-custom";
+    custom.setAttribute("aria-label", "Enter a custom card value");
+
+    var input = document.createElement("input");
+    input.type = "text";
+    input.className = "deck-custom-input";
+    input.placeholder = "Custom…";
+    input.maxLength = 6;
+    input.title = "Type a custom value and press Enter";
+    input.setAttribute("aria-label", "Custom card value");
+
+    custom.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var value = input.value.trim();
+      if (!value) return;
+      castVote(value);
+      input.value = "";
+      input.blur();
+    });
+
+    custom.appendChild(input);
+    deckEl.appendChild(custom);
   }
 
   function highlightSelectedDeckCard() {
     var cards = deckEl.querySelectorAll(".deck-card");
+    var matchedPreset = false;
     cards.forEach(function (card) {
-      if (card.dataset.value === selectedVote) {
+      if (selectedVote !== null && card.dataset.value === selectedVote) {
         card.classList.add("selected");
+        matchedPreset = true;
       } else {
         card.classList.remove("selected");
       }
     });
+
+    // If the current vote is a custom value (not one of the preset cards),
+    // reflect it on the custom-entry row so the user sees what they cast.
+    var customRow = deckEl.querySelector(".deck-custom");
+    if (customRow) {
+      var isCustom = selectedVote !== null && !matchedPreset;
+      customRow.classList.toggle("selected", isCustom);
+      var customInput = customRow.querySelector(".deck-custom-input");
+      if (customInput) {
+        customInput.placeholder = isCustom ? selectedVote : "Custom";
+      }
+    }
   }
 
   buildDeck();

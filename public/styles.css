@@ -9,7 +9,7 @@
   --color-accent: #818cf8;
   --color-bg: #f4f6fb;
   --color-surface: #ffffff;
-  --color-border: #e2e5f1;
+  --color-border: #e6e8f4;
   --color-text: #1e2233;
   --color-text-muted: #6b7280;
   --color-success: #22c55e;
@@ -17,13 +17,22 @@
   --color-danger: #ef4444;
   --color-spectator: #9ca3af;
 
-  --shadow-sm: 0 1px 2px rgba(30, 34, 51, 0.06), 0 1px 1px rgba(30, 34, 51, 0.04);
-  --shadow-md: 0 4px 10px rgba(30, 34, 51, 0.08), 0 2px 4px rgba(30, 34, 51, 0.04);
-  --shadow-lg: 0 12px 32px rgba(30, 34, 51, 0.14), 0 4px 10px rgba(30, 34, 51, 0.06);
+  /* Brand gradient used across the header, buttons and accents. */
+  --gradient-brand: linear-gradient(135deg, #6366f1 0%, #8b5cf6 55%, #ec4899 120%);
+  --gradient-brand-soft: linear-gradient(135deg, #eef2ff 0%, #f5f0ff 100%);
 
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 18px;
+  /* Frosted-glass surface used for panels and the header. */
+  --glass-bg: rgba(255, 255, 255, 0.72);
+  --glass-border: rgba(255, 255, 255, 0.6);
+
+  --shadow-sm: 0 1px 2px rgba(30, 34, 51, 0.05), 0 1px 3px rgba(30, 34, 51, 0.04);
+  --shadow-md: 0 6px 16px rgba(30, 34, 51, 0.08), 0 2px 6px rgba(30, 34, 51, 0.05);
+  --shadow-lg: 0 18px 44px rgba(30, 34, 51, 0.16), 0 6px 14px rgba(30, 34, 51, 0.07);
+  --shadow-glow: 0 8px 24px rgba(99, 102, 241, 0.28);
+
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 22px;
 
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
     Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
@@ -41,8 +50,11 @@ html, body {
 
 body {
   font-family: var(--font-sans);
-  background: radial-gradient(1200px 480px at 50% -160px, #e0e5fb 0%, rgba(224, 229, 251, 0) 70%),
-    linear-gradient(180deg, #eef1fb 0%, #f4f6fb 260px);
+  background:
+    radial-gradient(720px 520px at 12% -8%, rgba(129, 140, 248, 0.28) 0%, rgba(129, 140, 248, 0) 60%),
+    radial-gradient(680px 520px at 92% 4%, rgba(236, 72, 153, 0.18) 0%, rgba(236, 72, 153, 0) 58%),
+    radial-gradient(900px 620px at 50% 120%, rgba(139, 92, 246, 0.16) 0%, rgba(139, 92, 246, 0) 60%),
+    linear-gradient(180deg, #eef1fb 0%, #f5f6fc 320px, #f4f6fb 100%);
   background-attachment: fixed;
   color: var(--color-text);
   -webkit-font-smoothing: antialiased;
@@ -127,14 +139,31 @@ body {
 
 .modal-title {
   margin: 0 0 4px;
-  font-size: 24px;
-  font-weight: 700;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+/* Clip the gradient to the TEXT only — applying it to the whole heading also
+   made the 🃏 emoji transparent (invisible). */
+.modal-title-text {
+  background: var(--gradient-brand);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .modal-subtitle {
   margin: 0 0 20px;
   color: var(--color-text-muted);
   font-size: 14px;
+  text-align: center;
+  line-height: 1.5;
+  text-wrap: balance;
 }
 
 /* ------------------------------------------------------------------------
@@ -216,14 +245,25 @@ body {
 }
 
 .btn-primary {
-  background: var(--color-primary);
+  background: var(--gradient-brand);
+  background-size: 140% 140%;
+  background-position: 0% 50%;
   color: #fff;
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-glow);
+  transition: transform 0.1s ease, box-shadow 0.2s ease, background-position 0.4s ease;
 }
 
 .btn-primary:hover {
-  background: var(--color-primary-dark);
-  box-shadow: var(--shadow-md);
+  background-position: 100% 50%;
+  box-shadow: 0 10px 28px rgba(99, 102, 241, 0.38);
+  transform: translateY(-1px);
+}
+
+.btn-primary:disabled {
+  filter: grayscale(0.4) opacity(0.7);
+  box-shadow: var(--shadow-sm);
+  cursor: default;
+  transform: none;
 }
 
 .btn-secondary {
@@ -251,25 +291,39 @@ body {
 }
 
 .app-header {
-  background: var(--color-surface);
+  position: relative;
+  overflow: hidden;
+  background: var(--gradient-brand);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  padding: 18px 20px;
+  box-shadow: var(--shadow-md), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  padding: 22px 24px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
+  color: #fff;
+}
+
+/* Subtle sheen sweeping across the header. */
+.app-header::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(420px 160px at 85% -40%, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0) 70%);
+  pointer-events: none;
 }
 
 .brand {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-weight: 700;
-  font-size: 18px;
+  gap: 10px;
+  font-weight: 800;
+  font-size: 20px;
+  letter-spacing: -0.01em;
 }
 
 .brand-emoji {
-  font-size: 22px;
+  font-size: 26px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
 }
 
 .invite-row {
@@ -279,10 +333,19 @@ body {
 
 .invite-input {
   flex: 1;
-  background: var(--color-primary-light);
-  color: var(--color-text-muted);
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
   font-size: 13px;
-  border: 1.5px solid transparent;
+  border: 1.5px solid rgba(255, 255, 255, 0.28);
+}
+
+.invite-input::placeholder {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.invite-input:focus {
+  border-color: rgba(255, 255, 255, 0.75);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.18);
 }
 
 .user-row {
@@ -293,8 +356,82 @@ body {
 }
 
 .user-label {
-  color: var(--color-text-muted);
+  color: rgba(255, 255, 255, 0.85);
   white-space: nowrap;
+}
+
+/* The inline name field sits on the colored header, so give it a readable
+   translucent surface rather than the default white-on-white. It must NOT
+   flex-grow here (the base rule sets flex:1) or it would stretch across the
+   whole row and shove the round-action buttons out of alignment. */
+.user-row .text-input-inline {
+  flex: 0 1 220px;
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.28);
+  color: #fff;
+}
+
+.user-row .text-input-inline:focus {
+  border-color: rgba(255, 255, 255, 0.75);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.18);
+}
+
+/* On the colored header the invite button reads better as a solid light chip. */
+.app-header .btn-secondary {
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--color-primary-dark);
+  border-color: transparent;
+}
+
+.app-header .btn-secondary:hover {
+  background: #fff;
+}
+
+/* Reveal / New round buttons relocated next to the "You are …" name field.
+   Push them to the far end of the user row. */
+.round-actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+
+.round-actions .btn {
+  padding: 8px 16px;
+  font-size: 14px;
+}
+
+/* The primary button is a gradient elsewhere, but on the gradient header it
+   needs to be a solid light chip so it stays distinct and legible. */
+.app-header .round-actions .btn-primary {
+  background: #fff;
+  color: var(--color-primary-dark);
+  border: 1px solid transparent;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+}
+
+.app-header .round-actions .btn-primary:hover:not(:disabled) {
+  background: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.24);
+}
+
+.app-header .round-actions .btn-primary:disabled {
+  background: rgba(255, 255, 255, 0.45);
+  color: rgba(255, 255, 255, 0.85);
+  box-shadow: none;
+  filter: none;
+}
+
+/* Reset reads as a translucent outline chip on the header. */
+.app-header .round-actions .btn-secondary {
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.app-header .round-actions .btn-secondary:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.28);
 }
 
 .tag {
@@ -331,12 +468,14 @@ body {
 .topic-section,
 .table-section,
 .stats-section,
-.controls-section,
 .deck-section {
-  background: var(--color-surface);
+  background: var(--glass-bg);
+  backdrop-filter: blur(14px) saturate(1.4);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
-  padding: 20px;
+  padding: 22px;
 }
 
 .topic-input {
@@ -359,11 +498,16 @@ body {
   flex-direction: column;
   align-items: center;
   gap: 10px;
-  padding: 14px 8px;
+  padding: 16px 8px;
   border-radius: var(--radius-md);
-  background: var(--color-bg);
+  background: linear-gradient(160deg, #ffffff 0%, #f6f7fd 100%);
   border: 1.5px solid var(--color-border);
-  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+  transition: box-shadow 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+}
+
+.player-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
 }
 
 .player-card.is-self {
@@ -437,7 +581,7 @@ body {
 }
 
 .vote-card.state-hidden {
-  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+  background: var(--gradient-brand);
   color: #fff;
   box-shadow: var(--shadow-sm);
 }
@@ -552,9 +696,9 @@ body {
 
 .host-hint {
   width: 100%;
-  margin: 0;
-  text-align: center;
-  color: var(--color-text-muted);
+  margin: 6px 0 0;
+  text-align: right;
+  color: rgba(255, 255, 255, 0.85);
   font-size: 13px;
 }
 
@@ -592,11 +736,24 @@ body {
 .deck-title {
   margin: 0;
   font-size: 15px;
-  font-weight: 700;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Clip the gradient to the TEXT only — applying it to the whole heading also
+   made the 🃏 emoji transparent (invisible). */
+.deck-title-text {
+  background: var(--gradient-brand);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .deck-subtitle {
-  margin: 2px 0 14px;
+  margin: 2px 0 16px;
   font-size: 12px;
   color: var(--color-text-muted);
 }
@@ -619,9 +776,9 @@ body {
 .deck-card {
   width: 56px;
   height: 78px;
-  border-radius: 8px;
+  border-radius: 10px;
   border: 1.5px solid var(--color-border);
-  background: var(--color-surface);
+  background: linear-gradient(160deg, #ffffff 0%, #f7f8ff 100%);
   font-size: 18px;
   font-weight: 700;
   color: var(--color-text);
@@ -629,6 +786,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: var(--shadow-sm);
   transition: transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1.2), box-shadow 0.15s ease,
     border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
   font-family: inherit;
@@ -654,11 +812,11 @@ body {
 }
 
 .deck-card.selected {
-  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+  background: var(--gradient-brand);
   color: #fff;
-  border-color: var(--color-primary-dark);
+  border-color: transparent;
   transform: translateY(-10px) scale(1.06);
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-glow);
 }
 
 .deck-card.selected::after {
@@ -680,6 +838,63 @@ body {
   font-size: 14px;
 }
 
+/* Custom card entry — sits in the deck grid right after the ☕ card and spans
+   the two remaining columns of the last row, so its right edge lines up under
+   the ? card above it. Same height as a deck card. Type a value + Enter. */
+.deck-custom {
+  display: flex;
+  grid-column: span 2;
+  height: 78px;
+}
+
+.deck-panel .deck-custom {
+  height: auto;
+  aspect-ratio: 112 / 78; /* two card-columns wide, one card tall */
+}
+
+.deck-custom-input {
+  width: 100%;
+  height: 100%;
+  padding: 4px;
+  border-radius: 10px;
+  border: 1.5px dashed var(--color-border);
+  background: linear-gradient(160deg, #ffffff 0%, #f7f8ff 100%);
+  box-shadow: var(--shadow-sm);
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  text-align: center;
+  color: var(--color-text);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease,
+    color 0.15s ease;
+}
+
+.deck-custom-input:focus {
+  outline: none;
+  border-style: solid;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
+.deck-custom-input::placeholder {
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+
+/* When the active vote is a custom value, light the tile up like a selected card. */
+.deck-custom.selected .deck-custom-input {
+  border-style: solid;
+  border-color: transparent;
+  background: var(--gradient-brand);
+  color: #fff;
+  box-shadow: var(--shadow-glow);
+}
+
+.deck-custom.selected .deck-custom-input::placeholder {
+  color: #fff;
+  opacity: 0.95;
+}
+
 /* ------------------------------------------------------------------------
    Round history (side panel)
    ------------------------------------------------------------------------ */
@@ -687,16 +902,26 @@ body {
 .history-panel {
   width: 280px;
   flex-shrink: 0;
-  background: var(--color-surface);
+  background: var(--glass-bg);
+  backdrop-filter: blur(14px) saturate(1.4);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
-  padding: 18px;
+  padding: 20px;
   position: sticky;
   top: 20px;
   max-height: calc(100vh - 40px);
   display: flex;
   flex-direction: column;
   animation: panel-in 0.35s ease-out both;
+}
+
+.history-title {
+  background: var(--gradient-brand);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 @keyframes panel-in {
@@ -935,15 +1160,24 @@ body {
     font-size: 16px;
   }
 
-  .controls-section {
-    flex-direction: column;
-  }
-
   .invite-row {
     flex-direction: column;
   }
 
   .user-row {
     flex-wrap: wrap;
+  }
+
+  .round-actions {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .round-actions .btn {
+    flex: 1;
+  }
+
+  .host-hint {
+    text-align: left;
   }
 }

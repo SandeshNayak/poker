@@ -14,8 +14,11 @@
   <!-- Name entry modal -->
   <div id="join-modal" class="modal-overlay">
     <div class="modal-card">
-      <h1 class="modal-title">🃏 Planning Poker</h1>
-      <p class="modal-subtitle">Enter your name to join the estimation session.</p>
+      <h1 class="modal-title">
+        <span class="modal-title-emoji">🃏</span>
+        <span class="modal-title-text">Planning Poker</span>
+      </h1>
+      <p class="modal-subtitle" id="modal-subtitle">Enter your name to join the estimation session.</p>
       <form id="join-form">
         <label class="field-label" for="name-input">Your name</label>
         <input
@@ -33,7 +36,7 @@
           <span>Join as spectator (watch only, no voting)</span>
         </label>
 
-        <button type="submit" class="btn btn-primary btn-block">Join session</button>
+        <button type="submit" id="join-submit-btn" class="btn btn-primary btn-block">Join session</button>
       </form>
     </div>
   </div>
@@ -55,12 +58,18 @@
         <span class="user-label">You are</span>
         <input id="change-name-input" class="text-input text-input-inline" maxlength="40" />
         <span id="spectator-tag" class="tag tag-spectator hidden">Spectator</span>
+
+        <div class="round-actions">
+          <button id="reveal-btn" class="btn btn-primary">Reveal cards</button>
+          <button id="reset-btn" class="btn btn-secondary">New round</button>
+        </div>
       </div>
+      <p id="host-hint" class="host-hint hidden">Only the host can reveal cards and start new rounds.</p>
     </header>
 
     <div class="content-row">
     <aside id="deck-section" class="deck-section deck-panel">
-      <h2 class="deck-title">🃏 Your cards</h2>
+      <h2 class="deck-title"><span class="deck-title-emoji">🃏</span><span class="deck-title-text">Your cards</span></h2>
       <p class="deck-subtitle">Pick your estimate</p>
       <div id="deck" class="deck"></div>
     </aside>
@@ -96,12 +105,6 @@
           </div>
         </div>
         <div id="agreement-badge" class="agreement-badge hidden">✔ Agreement!</div>
-      </section>
-
-      <section class="controls-section">
-        <button id="reveal-btn" class="btn btn-primary">Reveal cards</button>
-        <button id="reset-btn" class="btn btn-secondary">New round</button>
-        <p id="host-hint" class="host-hint hidden">Only the host can reveal cards and start new rounds.</p>
       </section>
     </main>
 
