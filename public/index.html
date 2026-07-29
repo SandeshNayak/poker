@@ -59,14 +59,20 @@
     </header>
 
     <div class="content-row">
+    <aside id="deck-section" class="deck-section deck-panel">
+      <h2 class="deck-title">🃏 Your cards</h2>
+      <p class="deck-subtitle">Pick your estimate</p>
+      <div id="deck" class="deck"></div>
+    </aside>
+
     <main class="main-content">
       <section class="topic-section">
-        <label class="field-label" for="topic-input">Story / topic</label>
+        <label class="field-label" for="topic-input">Note</label>
         <input
           id="topic-input"
           class="text-input topic-input"
           type="text"
-          placeholder="What are we estimating?"
+          placeholder="Add your notes here"
         />
       </section>
 
@@ -97,10 +103,6 @@
         <button id="reset-btn" class="btn btn-secondary">New round</button>
         <p id="host-hint" class="host-hint hidden">Only the host can reveal cards and start new rounds.</p>
       </section>
-
-      <section id="deck-section" class="deck-section">
-        <div id="deck" class="deck"></div>
-      </section>
     </main>
 
     <aside id="history-panel" class="history-panel">
@@ -116,7 +118,17 @@
     </div>
 
     <footer class="app-footer">
-      Planning Poker — built for scrum estimation
+      <div>Planning Poker — built for scrum estimation</div>
+      <div class="app-credit">Developed by Sandesh Nayak</div>
+      <div class="poker-logo" aria-label="Joker logo" role="img">
+        <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <!-- round badge -->
+          <circle cx="50" cy="50" r="47"
+            fill="#ffffff" stroke="#6366f1" stroke-width="3" />
+          <!-- joker -->
+          <text x="50" y="66" text-anchor="middle" font-size="52">&#127183;</text>
+        </svg>
+      </div>
     </footer>
   </div>
 
