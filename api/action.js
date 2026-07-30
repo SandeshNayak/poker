@@ -42,6 +42,7 @@ const ACTIONS = {
   reveal: (roomId, playerId) => store.reveal(roomId, playerId),
   reset: (roomId, playerId) => store.reset(roomId, playerId),
   newRound: (roomId, playerId) => store.newRound(roomId, playerId),
+  clearHistory: (roomId, playerId) => store.clearHistory(roomId, playerId),
   setTopic: (roomId, playerId, body) => store.setTopic(roomId, playerId, body.topic),
   changeName: (roomId, playerId, body) => store.changeName(roomId, playerId, body.name),
   transferHost: (roomId, playerId, body) => store.transferHost(roomId, playerId, body.targetId),

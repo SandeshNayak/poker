@@ -143,6 +143,7 @@
   var historyList = document.getElementById("history-list");
   var historyEmpty = document.getElementById("history-empty");
   var historyCount = document.getElementById("history-count");
+  var clearHistoryBtn = document.getElementById("clear-history-btn");
 
   var toastContainer = document.getElementById("toast-container");
 
@@ -504,6 +505,14 @@
     apiAction("newRound");
   });
 
+  clearHistoryBtn.addEventListener("click", function () {
+    // Destructive and permanent — warn before wiping the whole log.
+    if (!window.confirm("Clear the entire round history? This permanently deletes all past rounds and cannot be undone.")) {
+      return;
+    }
+    apiAction("clearHistory");
+  });
+
   // ------------------------------------------------------------------
   // Rendering from `state`
   // ------------------------------------------------------------------
@@ -549,6 +558,10 @@
     resetBtn.classList.toggle("hidden", !amHost || !!state.revealed);
     newRoundBtn.classList.toggle("hidden", !amHost);
     hostHint.classList.toggle("hidden", amHost);
+
+    // "Clear history" is host-only, and only shown when there's history to clear.
+    var hasHistory = (state.history || []).length > 0;
+    clearHistoryBtn.classList.toggle("hidden", !amHost || !hasHistory);
 
     // Reveal button disabled once already revealed
     revealBtn.disabled = !!state.revealed;
@@ -605,6 +618,72 @@
     return avatar;
   }
 
+  // Build one player's card (avatar + vote face + name + host controls).
+  function buildPlayerCard(player, revealed, hostId) {
+    var card = document.createElement("div");
+    card.className = "player-card";
+    if (player.id === selfId) {
+      card.classList.add("is-self");
+    }
+    if (player.isSpectator) {
+      card.classList.add("is-spectator");
+    }
+
+    card.appendChild(buildAvatar(player.name));
+
+    var face = document.createElement("div");
+
+    if (player.isSpectator) {
+      face.className = "player-card-face";
+      var eye = document.createElement("span");
+      eye.className = "spectator-eye";
+      eye.textContent = "👁";
+      face.appendChild(eye);
+    } else if (revealed) {
+      face.className = "vote-card state-revealed";
+      face.textContent =
+        player.vote !== null && player.vote !== undefined ? player.vote : "-";
+    } else if (player.hasVoted) {
+      face.className = "vote-card state-hidden";
+      face.textContent = "🂠";
+    } else {
+      face.className = "vote-card state-empty";
+      face.textContent = "waiting";
+    }
+
+    var name = document.createElement("div");
+    name.className = "player-name";
+    name.textContent = player.name + (player.id === selfId ? " (you)" : "");
+
+    card.appendChild(face);
+    card.appendChild(name);
+
+    if (player.id === hostId) {
+      var hostBadge = document.createElement("span");
+      hostBadge.className = "host-badge";
+      hostBadge.textContent = "Host";
+      card.appendChild(hostBadge);
+    } else if (hostId === selfId) {
+      // Viewer is the host and this is someone else → offer to hand off the
+      // host role to them.
+      var makeHostBtn = document.createElement("button");
+      makeHostBtn.type = "button";
+      makeHostBtn.className = "make-host-btn";
+      makeHostBtn.textContent = "Make host";
+      makeHostBtn.title = "Transfer host to " + player.name;
+      (function (targetId, targetName) {
+        makeHostBtn.addEventListener("click", function () {
+          if (window.confirm("Transfer host to " + targetName + "?")) {
+            apiAction("transferHost", { targetId: targetId });
+          }
+        });
+      })(player.id, player.name);
+      card.appendChild(makeHostBtn);
+    }
+
+    return card;
+  }
+
   function renderPlayers(players, revealed, hostId) {
     var signature = playersSignature(players, revealed, hostId);
     if (signature === lastPlayersSignature) {
@@ -615,69 +694,7 @@
     clearChildren(playersGrid);
 
     players.forEach(function (player) {
-      var card = document.createElement("div");
-      card.className = "player-card";
-      if (player.id === selfId) {
-        card.classList.add("is-self");
-      }
-      if (player.isSpectator) {
-        card.classList.add("is-spectator");
-      }
-
-      card.appendChild(buildAvatar(player.name));
-
-      var face = document.createElement("div");
-
-      if (player.isSpectator) {
-        face.className = "player-card-face";
-        var eye = document.createElement("span");
-        eye.className = "spectator-eye";
-        eye.textContent = "👁";
-        face.appendChild(eye);
-      } else if (revealed) {
-        face.className = "vote-card state-revealed";
-        face.textContent =
-          player.vote !== null && player.vote !== undefined ? player.vote : "-";
-      } else if (player.hasVoted) {
-        face.className = "vote-card state-hidden";
-        face.textContent = "🂠";
-      } else {
-        face.className = "vote-card state-empty";
-        face.textContent = "waiting";
-      }
-
-      var name = document.createElement("div");
-      name.className = "player-name";
-      name.textContent =
-        player.name + (player.id === selfId ? " (you)" : "");
-
-      card.appendChild(face);
-      card.appendChild(name);
-
-      if (player.id === hostId) {
-        var hostBadge = document.createElement("span");
-        hostBadge.className = "host-badge";
-        hostBadge.textContent = "Host";
-        card.appendChild(hostBadge);
-      } else if (hostId === selfId) {
-        // Viewer is the host and this is someone else → offer to hand off the
-        // host role to them.
-        var makeHostBtn = document.createElement("button");
-        makeHostBtn.type = "button";
-        makeHostBtn.className = "make-host-btn";
-        makeHostBtn.textContent = "Make host";
-        makeHostBtn.title = "Transfer host to " + player.name;
-        (function (targetId, targetName) {
-          makeHostBtn.addEventListener("click", function () {
-            if (window.confirm("Transfer host to " + targetName + "?")) {
-              apiAction("transferHost", { targetId: targetId });
-            }
-          });
-        })(player.id, player.name);
-        card.appendChild(makeHostBtn);
-      }
-
-      playersGrid.appendChild(card);
+      playersGrid.appendChild(buildPlayerCard(player, revealed, hostId));
     });
   }
 
