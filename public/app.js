@@ -134,6 +134,7 @@
 
   var revealBtn = document.getElementById("reveal-btn");
   var resetBtn = document.getElementById("reset-btn");
+  var newRoundBtn = document.getElementById("new-round-btn");
   var hostHint = document.getElementById("host-hint");
 
   var deckSection = document.getElementById("deck-section");
@@ -482,9 +483,25 @@
   });
 
   resetBtn.addEventListener("click", function () {
+    // Warn before wiping the current votes (the note is kept — that's the
+    // difference from New round).
+    if (!window.confirm("Reset the round? This clears everyone's votes so the team can re-vote the same item. The note is kept.")) {
+      return;
+    }
     selectedVote = null;
     highlightSelectedDeckCard();
     apiAction("reset");
+  });
+
+  newRoundBtn.addEventListener("click", function () {
+    // Fresh item: clears votes AND the note. Confirm so the note isn't lost by
+    // accident (Reset round is the button that keeps it).
+    if (!window.confirm("Start a new round? This clears all votes and the note.")) {
+      return;
+    }
+    selectedVote = null;
+    highlightSelectedDeckCard();
+    apiAction("newRound");
   });
 
   // ------------------------------------------------------------------
@@ -527,7 +544,10 @@
     // Host-only controls: only the host may reveal/reset
     var amHost = !!(state.hostId && state.hostId === selfId);
     revealBtn.classList.toggle("hidden", !amHost);
-    resetBtn.classList.toggle("hidden", !amHost);
+    // Reset re-opens the current vote, so it only makes sense while cards are
+    // still hidden — hide it once the round has been revealed.
+    resetBtn.classList.toggle("hidden", !amHost || !!state.revealed);
+    newRoundBtn.classList.toggle("hidden", !amHost);
     hostHint.classList.toggle("hidden", amHost);
 
     // Reveal button disabled once already revealed
@@ -550,6 +570,41 @@
     });
   }
 
+  // Initials for the avatar: first letters of the first two words, else the
+  // first two characters of the name. Falls back to "?".
+  function initialsFor(name) {
+    var n = (name || "").trim();
+    if (!n) return "?";
+    var parts = n.split(/\s+/);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return n.slice(0, 2).toUpperCase();
+  }
+
+  // Deterministic hue from the name so everyone sees the same colour for a
+  // given person (no server state needed).
+  function hueFor(name) {
+    var s = name || "";
+    var hash = 0;
+    for (var i = 0; i < s.length; i++) {
+      hash = (hash * 31 + s.charCodeAt(i)) % 360;
+    }
+    return hash;
+  }
+
+  // Build a circular initials avatar coloured from the player's name.
+  function buildAvatar(name) {
+    var avatar = document.createElement("div");
+    avatar.className = "player-avatar";
+    var hue = hueFor(name);
+    avatar.style.background =
+      "linear-gradient(135deg, hsl(" + hue + ",70%,58%) 0%, hsl(" +
+      ((hue + 40) % 360) + ",72%,48%) 100%)";
+    avatar.textContent = initialsFor(name);
+    return avatar;
+  }
+
   function renderPlayers(players, revealed, hostId) {
     var signature = playersSignature(players, revealed, hostId);
     if (signature === lastPlayersSignature) {
@@ -568,6 +623,8 @@
       if (player.isSpectator) {
         card.classList.add("is-spectator");
       }
+
+      card.appendChild(buildAvatar(player.name));
 
       var face = document.createElement("div");
 

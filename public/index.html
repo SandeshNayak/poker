@@ -3,7 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Planning Poker</title>
+  <title>Planning Poker — Agile Sprint Estimation</title>
+  <meta name="description" content="Real-time Planning Poker for agile sprint estimation." />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%236366f1'/%3E%3Cpath fill='%23ffffff' d='M16 7 C12 13 7 15 7 20 a5 5 0 0 0 9 3 c-0.6 3 -1.8 5 -3.4 6.2 h6.8 c-1.6 -1.2 -2.8 -3.2 -3.4 -6.2 a5 5 0 0 0 9 -3 c0 -5 -5 -7 -9 -13 z'/%3E%3C/svg%3E" />
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
@@ -14,8 +16,14 @@
   <!-- Name entry modal -->
   <div id="join-modal" class="modal-overlay">
     <div class="modal-card">
+      <span class="logo-mark logo-mark--lg logo-mark--brand" aria-hidden="true">
+        <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+          <path fill="#ffffff" d="M16 7 C12 13 7 15 7 20 a5 5 0 0 0 9 3
+            c-0.6 3 -1.8 5 -3.4 6.2 h6.8 c-1.6 -1.2 -2.8 -3.2 -3.4 -6.2
+            a5 5 0 0 0 9 -3 c0 -5 -5 -7 -9 -13 z" />
+        </svg>
+      </span>
       <h1 class="modal-title">
-        <span class="modal-title-emoji">🃏</span>
         <span class="modal-title-text">Planning Poker</span>
       </h1>
       <p class="modal-subtitle" id="modal-subtitle">Enter your name to join the estimation session.</p>
@@ -46,7 +54,15 @@
     <header class="app-header">
       <div class="header-top">
         <div class="brand">
-          <span class="brand-emoji">🃏</span>
+          <span class="logo-mark logo-mark--onbrand" aria-hidden="true">
+            <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+              <rect x="1" y="1" width="30" height="30" rx="8"
+                fill="#ffffff" stroke="rgba(15,23,42,0.06)" stroke-width="1" />
+              <path fill="#6366f1" d="M16 7 C12 13 7 15 7 20 a5 5 0 0 0 9 3
+                c-0.6 3 -1.8 5 -3.4 6.2 h6.8 c-1.6 -1.2 -2.8 -3.2 -3.4 -6.2
+                a5 5 0 0 0 9 -3 c0 -5 -5 -7 -9 -13 z" />
+            </svg>
+          </span>
           <span class="brand-name">Planning Poker</span>
         </div>
 
@@ -62,9 +78,10 @@
       <div class="header-actions">
         <button id="copy-link-btn" class="btn btn-secondary">Copy invite link</button>
         <button id="reveal-btn" class="btn btn-primary">Reveal cards</button>
-        <button id="reset-btn" class="btn btn-secondary">New round</button>
+        <button id="reset-btn" class="btn btn-secondary">Reset round</button>
+        <button id="new-round-btn" class="btn btn-secondary">New round</button>
       </div>
-      <p id="host-hint" class="host-hint hidden">Only the host can reveal cards and start new rounds.</p>
+      <p id="host-hint" class="host-hint hidden">Only the host can reveal cards, reset the round, or start a new one.</p>
     </header>
 
     <div class="content-row">
@@ -110,7 +127,7 @@
 
     <aside id="history-panel" class="history-panel">
       <div class="history-header">
-        <h2 class="history-title">📜 Round history</h2>
+        <h2 class="history-title"><span class="history-title-emoji">📜</span><span class="history-title-text">Round history</span></h2>
         <span id="history-count" class="history-count">0</span>
       </div>
       <p id="history-empty" class="history-empty">
@@ -121,17 +138,34 @@
     </div>
 
     <footer class="app-footer">
-      <div>Planning Poker — built for scrum estimation</div>
-      <div class="app-credit">Developed by Sandesh Nayak</div>
-      <div class="poker-logo" aria-label="Joker logo" role="img">
-        <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-          <!-- round badge -->
-          <circle cx="50" cy="50" r="47"
-            fill="#ffffff" stroke="#6366f1" stroke-width="3" />
-          <!-- joker -->
-          <text x="50" y="66" text-anchor="middle" font-size="52">&#127183;</text>
+      <div class="poker-logo" aria-label="Planning Poker logo" role="img">
+        <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="ppg" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#6366f1" />
+              <stop offset="0.55" stop-color="#8b5cf6" />
+              <stop offset="1" stop-color="#ec4899" />
+            </linearGradient>
+          </defs>
+          <!-- back card, tilted -->
+          <rect x="30" y="24" width="52" height="72" rx="10"
+            fill="#ffffff" stroke="#dbe4f5" stroke-width="2"
+            transform="rotate(-12 56 60)" />
+          <!-- front card -->
+          <rect x="40" y="26" width="52" height="72" rx="10"
+            fill="url(#ppg)" transform="rotate(9 66 62)" />
+          <!-- spade pip on the front card -->
+          <g transform="rotate(9 66 62)" fill="#ffffff">
+            <path d="M66 44 C58 54 50 58 50 66 a8 8 0 0 0 14 5
+              c-1 5 -3 8 -6 10 h16 c-3 -2 -5 -5 -6 -10
+              a8 8 0 0 0 14 -5 c0 -8 -8 -12 -16 -22 z" />
+          </g>
         </svg>
       </div>
+      <div class="footer-brand">Planning Poker</div>
+      <div>Built for agile sprint estimation</div>
+      <div class="app-credit">Developed by Sandesh Nayak</div>
+      <div class="app-version">v.1.0</div>
     </footer>
   </div>
 

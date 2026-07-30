@@ -3,36 +3,38 @@
    ======================================================================== */
 
 :root {
-  --color-primary: #6366f1;
-  --color-primary-dark: #4f46e5;
-  --color-primary-light: #eef2ff;
-  --color-accent: #818cf8;
-  --color-bg: #f4f6fb;
+  /* Professional blue/slate palette — a single confident accent on calm
+     neutrals. Reads as a business/enterprise tool, not a toy. */
+  --color-primary: #6366f1;       /* indigo-500 */
+  --color-primary-dark: #4f46e5;  /* indigo-600 */
+  --color-primary-light: #eef2ff; /* faint indigo tint for hovers/fills */
+  --color-accent: #818cf8;        /* indigo-400 */
+  --color-bg: #f1f5f9;            /* slate-100 */
   --color-surface: #ffffff;
-  --color-border: #e6e8f4;
-  --color-text: #1e2233;
-  --color-text-muted: #6b7280;
-  --color-success: #22c55e;
+  --color-border: #e2e8f0;        /* slate-200 */
+  --color-text: #0f172a;          /* slate-900 */
+  --color-text-muted: #64748b;    /* slate-500 */
+  --color-success: #16a34a;
   --color-success-bg: #dcfce7;
-  --color-danger: #ef4444;
-  --color-spectator: #9ca3af;
+  --color-danger: #dc2626;
+  --color-spectator: #94a3b8;     /* slate-400 */
 
-  /* Brand gradient used across the header, buttons and accents. */
+  /* Brand gradient — the original indigo → purple → pink blend, restored. */
   --gradient-brand: linear-gradient(135deg, #6366f1 0%, #8b5cf6 55%, #ec4899 120%);
   --gradient-brand-soft: linear-gradient(135deg, #eef2ff 0%, #f5f0ff 100%);
 
   /* Frosted-glass surface used for panels and the header. */
-  --glass-bg: rgba(255, 255, 255, 0.72);
-  --glass-border: rgba(255, 255, 255, 0.6);
+  --glass-bg: rgba(255, 255, 255, 0.78);
+  --glass-border: rgba(226, 232, 240, 0.9);
 
-  --shadow-sm: 0 1px 2px rgba(30, 34, 51, 0.05), 0 1px 3px rgba(30, 34, 51, 0.04);
-  --shadow-md: 0 6px 16px rgba(30, 34, 51, 0.08), 0 2px 6px rgba(30, 34, 51, 0.05);
-  --shadow-lg: 0 18px 44px rgba(30, 34, 51, 0.16), 0 6px 14px rgba(30, 34, 51, 0.07);
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.05);
+  --shadow-md: 0 6px 16px rgba(15, 23, 42, 0.07), 0 2px 6px rgba(15, 23, 42, 0.05);
+  --shadow-lg: 0 16px 40px rgba(15, 23, 42, 0.12), 0 5px 12px rgba(15, 23, 42, 0.06);
   --shadow-glow: 0 8px 24px rgba(99, 102, 241, 0.28);
 
-  --radius-sm: 10px;
-  --radius-md: 14px;
-  --radius-lg: 22px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
 
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
     Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
@@ -342,6 +344,44 @@ body {
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
 }
 
+/* ------------------------------------------------------------------------
+   Logo mark — a rounded card badge with a spade, used in the header brand,
+   the join modal, and (as a data-URI) the favicon. Replaces the flat emoji.
+   ------------------------------------------------------------------------ */
+.logo-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+}
+
+.logo-mark svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* On the blue header: a white card badge so it reads against the gradient. */
+.logo-mark--onbrand {
+  filter: drop-shadow(0 3px 6px rgba(15, 23, 42, 0.22));
+}
+
+/* Larger, filled brand-gradient badge for the join modal. */
+.logo-mark--lg {
+  width: 56px;
+  height: 56px;
+}
+
+.logo-mark--brand {
+  margin: 0 auto 12px;
+  border-radius: 16px;
+  background: var(--gradient-brand);
+  box-shadow: var(--shadow-glow);
+  padding: 12px;
+}
+
 /* "Welcome, <name>" pinned to the top-right — rendered as a soft glass pill. */
 .user-welcome {
   display: flex;
@@ -514,6 +554,28 @@ body {
 .player-card.is-self {
   border-color: var(--color-accent);
   box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
+/* Initials avatar — a coloured disc unique to each player's name. */
+.player-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  border: 2px solid var(--color-surface);
+  user-select: none;
+}
+
+.player-card.is-spectator .player-avatar {
+  filter: grayscale(0.5) opacity(0.85);
 }
 
 .player-name {
@@ -942,7 +1004,15 @@ body {
   animation: panel-in 0.35s ease-out both;
 }
 
+/* Clip the gradient to the TEXT only — applying it to the whole heading also
+   made the 📜 emoji transparent (invisible), same as the deck/modal titles. */
 .history-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.history-title-text {
   background: var(--gradient-brand);
   -webkit-background-clip: text;
   background-clip: text;
@@ -1105,10 +1175,23 @@ body {
   text-align: center;
   color: var(--color-text-muted);
   font-size: 13px;
-  padding: 10px 0;
+  padding: 28px 0 20px;
+  margin-top: 12px;
+  border-top: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  align-items: center;
+  gap: 4px;
+}
+
+.footer-brand {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  background: var(--gradient-brand);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .app-credit {
@@ -1117,16 +1200,28 @@ body {
   color: var(--color-primary-dark);
 }
 
+.app-version {
+  margin-top: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+  padding: 3px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+}
+
 .poker-logo {
-  margin-top: 10px;
+  margin-bottom: 4px;
   display: flex;
   justify-content: center;
 }
 
 .poker-logo svg {
-  width: 96px;
+  width: 72px;
   height: auto;
-  filter: drop-shadow(0 6px 14px rgba(30, 34, 51, 0.18));
+  filter: drop-shadow(0 6px 14px rgba(15, 23, 42, 0.16));
   transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1.2);
 }
 
