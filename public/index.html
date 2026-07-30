@@ -44,25 +44,25 @@
   <!-- Main app -->
   <div id="app" class="app hidden">
     <header class="app-header">
-      <div class="brand">
-        <span class="brand-emoji">🃏</span>
-        <span class="brand-name">Planning Poker</span>
-      </div>
-
-      <div class="invite-row">
-        <input id="invite-url" class="invite-input" type="text" readonly />
-        <button id="copy-link-btn" class="btn btn-secondary">Copy invite link</button>
-      </div>
-
-      <div class="user-row">
-        <span class="user-label">You are</span>
-        <input id="change-name-input" class="text-input text-input-inline" maxlength="40" />
-        <span id="spectator-tag" class="tag tag-spectator hidden">Spectator</span>
-
-        <div class="round-actions">
-          <button id="reveal-btn" class="btn btn-primary">Reveal cards</button>
-          <button id="reset-btn" class="btn btn-secondary">New round</button>
+      <div class="header-top">
+        <div class="brand">
+          <span class="brand-emoji">🃏</span>
+          <span class="brand-name">Planning Poker</span>
         </div>
+
+        <div class="user-welcome">
+          <span class="user-label">Welcome,</span>
+          <span id="user-name" class="user-name-label">Guest</span>
+          <span id="spectator-tag" class="tag tag-spectator hidden">Spectator</span>
+        </div>
+      </div>
+
+      <input id="invite-url" class="invite-input" type="text" readonly />
+
+      <div class="header-actions">
+        <button id="copy-link-btn" class="btn btn-secondary">Copy invite link</button>
+        <button id="reveal-btn" class="btn btn-primary">Reveal cards</button>
+        <button id="reset-btn" class="btn btn-secondary">New round</button>
       </div>
       <p id="host-hint" class="host-hint hidden">Only the host can reveal cards and start new rounds.</p>
     </header>

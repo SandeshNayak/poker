@@ -120,7 +120,7 @@
   var appRoot = document.getElementById("app");
   var inviteUrlInput = document.getElementById("invite-url");
   var copyLinkBtn = document.getElementById("copy-link-btn");
-  var changeNameInput = document.getElementById("change-name-input");
+  var userNameLabel = document.getElementById("user-name");
   var spectatorTag = document.getElementById("spectator-tag");
 
   var topicInput = document.getElementById("topic-input");
@@ -152,9 +152,9 @@
   // ------------------------------------------------------------------
   // Toast helper
   // ------------------------------------------------------------------
-  function showToast(message) {
+  function showToast(message, type) {
     var toast = document.createElement("div");
-    toast.className = "toast";
+    toast.className = "toast" + (type === "success" ? " toast-success" : "");
     toast.textContent = message;
     toastContainer.appendChild(toast);
     setTimeout(function () {
@@ -273,6 +273,54 @@
       });
   }
 
+  // Persist the join for this room in sessionStorage so a page REFRESH resumes
+  // straight into the room (no modal). sessionStorage is scoped to the tab and
+  // cleared when the tab/browser closes, which is exactly the "leave only on
+  // close" semantics we want: refresh keeps you in, closing drops you (the
+  // server prunes you after STALE_MS since you stop polling).
+  var JOIN_STORAGE_KEY = "planningPoker.join." + roomId;
+
+  function saveJoin(name, isSpectator) {
+    try {
+      window.sessionStorage.setItem(
+        JOIN_STORAGE_KEY,
+        JSON.stringify({ name: name, isSpectator: isSpectator })
+      );
+    } catch (e) {
+      /* ignore */
+    }
+  }
+
+  function loadJoin() {
+    try {
+      var raw = window.sessionStorage.getItem(JOIN_STORAGE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // Enter the room: join on the server, flip from modal to app, start polling.
+  function enterRoom(name, isSpectator) {
+    return apiAction("join", { name: name, isSpectator: isSpectator }).then(function (data) {
+      if (data.ok) {
+        selfId = playerId;
+        // Remember join details so polling can silently re-join if we ever
+        // fall out of the room's player list (see maybeRejoin), and so a
+        // refresh can resume without prompting again.
+        hasJoined = true;
+        joinName = name;
+        joinIsSpectator = isSpectator;
+        saveJoin(name, isSpectator);
+        joinModal.classList.add("hidden");
+        appRoot.classList.remove("hidden");
+        setupInviteUrl();
+        startPolling();
+      }
+      return data;
+    });
+  }
+
   joinForm.addEventListener("submit", function (event) {
     event.preventDefault();
     var name = nameInput.value.trim();
@@ -287,40 +335,15 @@
       /* ignore */
     }
 
-    apiAction("join", { name: name, isSpectator: isSpectator }).then(function (data) {
-      if (data.ok) {
-        selfId = playerId;
-        // Remember join details so polling can silently re-join if we ever
-        // fall out of the room's player list (see maybeRejoin).
-        hasJoined = true;
-        joinName = name;
-        joinIsSpectator = isSpectator;
-        joinModal.classList.add("hidden");
-        appRoot.classList.remove("hidden");
-        setupInviteUrl();
-        startPolling();
-      }
-    });
+    enterRoom(name, isSpectator);
   });
 
-  // ------------------------------------------------------------------
-  // Best-effort leave notification on tab close/navigation
-  // ------------------------------------------------------------------
-  window.addEventListener("beforeunload", function () {
-    try {
-      if (navigator.sendBeacon) {
-        navigator.sendBeacon(
-          "/api/action",
-          new Blob(
-            [JSON.stringify({ type: "leave", roomId: roomId, playerId: playerId })],
-            { type: "application/json" }
-          )
-        );
-      }
-    } catch (e) {
-      /* ignore */
-    }
-  });
+  // Auto-resume on refresh: if this tab already joined this room, re-enter
+  // without showing the modal. (sessionStorage survives reload but not close.)
+  var resumed = loadJoin();
+  if (resumed && resumed.name) {
+    enterRoom(resumed.name, !!resumed.isSpectator);
+  }
 
   // ------------------------------------------------------------------
   // Invite URL + copy
@@ -342,7 +365,7 @@
       inviteUrlInput.select();
       try {
         document.execCommand("copy");
-        showToast("Invite link copied!");
+        showToast("Invite link copied!", "success");
       } catch (e) {
         showToast("Could not copy link.");
       }
@@ -351,7 +374,7 @@
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(url).then(
         function () {
-          showToast("Invite link copied!");
+          showToast("Invite link copied!", "success");
         },
         fallbackCopy
       );
@@ -360,28 +383,8 @@
     }
   });
 
-  // ------------------------------------------------------------------
-  // Change name
-  // ------------------------------------------------------------------
-  var changeNameTimer = null;
-  changeNameInput.addEventListener("input", function () {
-    clearTimeout(changeNameTimer);
-    changeNameTimer = setTimeout(function () {
-      var name = changeNameInput.value.trim();
-      if (!name) {
-        return;
-      }
-      try {
-        window.localStorage.setItem(NAME_STORAGE_KEY, name);
-      } catch (e) {
-        /* ignore */
-      }
-      // Keep the remembered join name in sync so a self-heal re-join
-      // (maybeRejoin) uses the current name, not the original one.
-      joinName = name;
-      apiAction("changeName", { name: name });
-    }, 500);
-  });
+  // Name is chosen at join time and shown as a static label in the header
+  // (no inline editing).
 
   // ------------------------------------------------------------------
   // Topic
@@ -499,9 +502,9 @@
     });
     var selfIsSpectator = !!(self && self.isSpectator);
 
-    // Sync change-name input + spectator tag
-    if (self && document.activeElement !== changeNameInput) {
-      changeNameInput.value = self.name || "";
+    // Sync the welcome name label + spectator tag
+    if (self) {
+      userNameLabel.textContent = self.name || "Guest";
     }
     spectatorTag.classList.toggle("hidden", !selfIsSpectator);
 
@@ -532,7 +535,28 @@
     revealBtn.textContent = state.revealed ? "Revealed" : "Reveal cards";
   }
 
+  // Signature of the last rendered player grid. We only rebuild the grid (which
+  // re-triggers the card-flip animation) when something actually changed —
+  // otherwise every poll would replay the animation, making cards "blink".
+  var lastPlayersSignature = null;
+
+  function playersSignature(players, revealed, hostId) {
+    return JSON.stringify({
+      r: revealed,
+      h: hostId,
+      p: players.map(function (p) {
+        return [p.id, p.name, p.isSpectator, p.hasVoted, revealed ? p.vote : 0];
+      }),
+    });
+  }
+
   function renderPlayers(players, revealed, hostId) {
+    var signature = playersSignature(players, revealed, hostId);
+    if (signature === lastPlayersSignature) {
+      return; // nothing changed — leave the DOM (and animations) alone
+    }
+    lastPlayersSignature = signature;
+
     clearChildren(playersGrid);
 
     players.forEach(function (player) {
@@ -578,6 +602,22 @@
         hostBadge.className = "host-badge";
         hostBadge.textContent = "Host";
         card.appendChild(hostBadge);
+      } else if (hostId === selfId) {
+        // Viewer is the host and this is someone else → offer to hand off the
+        // host role to them.
+        var makeHostBtn = document.createElement("button");
+        makeHostBtn.type = "button";
+        makeHostBtn.className = "make-host-btn";
+        makeHostBtn.textContent = "Make host";
+        makeHostBtn.title = "Transfer host to " + player.name;
+        (function (targetId, targetName) {
+          makeHostBtn.addEventListener("click", function () {
+            if (window.confirm("Transfer host to " + targetName + "?")) {
+              apiAction("transferHost", { targetId: targetId });
+            }
+          });
+        })(player.id, player.name);
+        card.appendChild(makeHostBtn);
       }
 
       playersGrid.appendChild(card);
