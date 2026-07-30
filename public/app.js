@@ -5,8 +5,11 @@
 (function () {
   "use strict";
 
+  // Fibonacci scale within 1–10 (the widening gaps force discussion when
+  // uncertainty is high — the point of relative estimation). Plus the standard
+  // "?" (need more info) and "☕" (break) cards.
   var DECK_VALUES = [
-    "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "?", "☕"
+    "1", "2", "3", "5", "8", "?", "☕"
   ];
   var NAME_STORAGE_KEY = "planningPoker.name";
   var PLAYER_ID_STORAGE_KEY = "planningPoker.playerId";
