@@ -83,28 +83,8 @@
 
     <p id="host-hint" class="host-hint hidden">Only the host can reveal cards, reset the round, or start a new one.</p>
 
-    <!-- Stage: roster dashboard (left) · table (center) · history (right) -->
+    <!-- Stage: table (center) · voting history (right) -->
     <div class="stage">
-      <aside class="chat-panel">
-        <div class="roster-header">
-          <h2 class="roster-title"><span class="chat-title-emoji">💬</span> Chat</h2>
-          <span id="roster-count" class="roster-count" title="Players who have voted">0 ✓</span>
-        </div>
-        <form id="chat-form" class="chat-form" autocomplete="off">
-          <input
-            id="chat-input"
-            class="chat-input"
-            type="text"
-            maxlength="300"
-            placeholder="Type a message…"
-            aria-label="Chat message"
-          />
-          <button type="submit" id="chat-send-btn" class="chat-send-btn" aria-label="Send">➤</button>
-        </form>
-        <ol id="chat-list" class="chat-list"></ol>
-        <p id="chat-empty" class="chat-empty">No messages yet. Say hi 👋</p>
-      </aside>
-
       <main class="stage-main">
 
         <section class="topic-section">
@@ -199,6 +179,50 @@
 
     <!-- Full-viewport layer the reactions float up through. -->
     <div id="reaction-layer" class="reaction-layer" aria-hidden="true"></div>
+
+    <!-- Floating Messenger-style chat, pinned bottom-right. -->
+    <div id="chat-widget" class="chat-widget">
+      <aside id="chat-panel" class="chat-panel" aria-label="Live chat">
+        <div class="roster-header">
+          <h2 class="roster-title"><span class="chat-title-emoji">💬</span> Chat</h2>
+          <div class="roster-header-right">
+            <span id="roster-count" class="roster-count" title="Players who have voted">0 ✓</span>
+            <button
+              type="button"
+              id="chat-close-btn"
+              class="chat-close-btn"
+              aria-label="Close chat"
+              title="Close chat"
+            >✕</button>
+          </div>
+        </div>
+        <form id="chat-form" class="chat-form" autocomplete="off">
+          <input
+            id="chat-input"
+            class="chat-input"
+            type="text"
+            maxlength="300"
+            placeholder="Type a message…"
+            aria-label="Chat message"
+          />
+          <button type="submit" id="chat-send-btn" class="chat-send-btn" aria-label="Send">➤</button>
+        </form>
+        <ol id="chat-list" class="chat-list"></ol>
+        <p id="chat-empty" class="chat-empty">No messages yet. Say hi 👋</p>
+      </aside>
+
+      <button
+        type="button"
+        id="chat-launcher"
+        class="chat-launcher"
+        aria-label="Open chat"
+        aria-expanded="false"
+        title="Chat"
+      >
+        <span class="chat-launcher-icon" aria-hidden="true">💬</span>
+        <span id="chat-unread" class="chat-unread hidden" aria-hidden="true">0</span>
+      </button>
+    </div>
 
     <footer class="app-footer">
       <div class="footer-brand-row">

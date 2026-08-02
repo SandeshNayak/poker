@@ -131,10 +131,15 @@
   var playersGrid = document.getElementById("players-grid");
   var rosterCount = document.getElementById("roster-count");
 
+  var chatWidget = document.getElementById("chat-widget");
+  var chatPanel = document.getElementById("chat-panel");
   var chatList = document.getElementById("chat-list");
   var chatEmpty = document.getElementById("chat-empty");
   var chatForm = document.getElementById("chat-form");
   var chatInput = document.getElementById("chat-input");
+  var chatLauncher = document.getElementById("chat-launcher");
+  var chatCloseBtn = document.getElementById("chat-close-btn");
+  var chatUnread = document.getElementById("chat-unread");
 
   var statsSection = document.getElementById("stats-section");
   var statAverage = document.getElementById("stat-average");
@@ -836,19 +841,36 @@
   var seenChatIds = Object.create(null);
   var chatInitialized = false;
 
+  function formatChatTime(at) {
+    if (!at) return "";
+    try {
+      return new Date(at).toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch (e) {
+      return "";
+    }
+  }
+
   function appendChatMessage(msg) {
     if (!chatList) return;
     var li = document.createElement("li");
     li.className = "chat-msg";
     if (msg.byId === selfId) li.classList.add("is-self");
 
+    // Head row mirrors .history-item-head: label on the left, value on the
+    // right (sender name · timestamp).
     var head = document.createElement("div");
     head.className = "chat-msg-head";
-    head.appendChild(buildAvatar(msg.by));
     var who = document.createElement("span");
     who.className = "chat-msg-who";
     who.textContent = msg.byId === selfId ? "You" : msg.by;
     head.appendChild(who);
+    var when = document.createElement("span");
+    when.className = "chat-msg-time";
+    when.textContent = formatChatTime(msg.at);
+    head.appendChild(when);
     li.appendChild(head);
 
     var body = document.createElement("div");
@@ -874,6 +896,9 @@
       if (!chatInitialized && chatEmpty) {
         chatEmpty.classList.toggle("hidden", chat.length > 0);
       }
+      // A completed poll (even an empty one) establishes the baseline, so the
+      // first message to arrive afterwards counts as unread.
+      chatInitialized = true;
       return;
     }
     if (chatEmpty) chatEmpty.classList.add("hidden");
@@ -884,6 +909,21 @@
     var nearTop = chatList.scrollTop < 60;
 
     fresh.forEach(appendChatMessage);
+
+    // If the window is closed and a fresh message arrives from someone else,
+    // pop it open automatically (Messenger-style). Skip the very first render
+    // (existing backlog) and the user's own messages.
+    if (chatInitialized && !chatIsOpen()) {
+      var others = fresh.filter(function (m) {
+        return m.byId !== selfId;
+      }).length;
+      if (others > 0) {
+        // Auto-open, but don't persist — respects the user's saved preference
+        // on the next reload.
+        setChatOpen(true, false);
+      }
+    }
+
     chatInitialized = true;
 
     if (nearTop) chatList.scrollTop = 0;
@@ -901,6 +941,67 @@
     chatForm.addEventListener("submit", function (e) {
       e.preventDefault();
       sendChat();
+    });
+  }
+
+  // Open/close the floating chat window (Messenger-style). Closed by default;
+  // the launcher bubble stays visible and shows an unread badge. The choice
+  // persists across reloads.
+  var chatUnreadCount = 0;
+
+  function refreshChatUnreadBadge() {
+    if (!chatUnread) return;
+    chatUnread.textContent = chatUnreadCount > 99 ? "99+" : String(chatUnreadCount);
+    chatUnread.classList.toggle("hidden", chatUnreadCount <= 0);
+  }
+
+  function chatIsOpen() {
+    return !!chatWidget && !chatWidget.classList.contains("is-closed");
+  }
+
+  // persist defaults to true; auto-open (on an incoming message) passes false
+  // so it doesn't overwrite the user's own open/closed preference.
+  function setChatOpen(open, persist) {
+    if (!chatWidget) return;
+    chatWidget.classList.toggle("is-closed", !open);
+    if (chatLauncher) {
+      chatLauncher.setAttribute("aria-expanded", open ? "true" : "false");
+      chatLauncher.setAttribute("aria-label", open ? "Close chat" : "Open chat");
+    }
+    if (open) {
+      // Opening clears unread and pins to the newest message.
+      chatUnreadCount = 0;
+      refreshChatUnreadBadge();
+      if (chatList) chatList.scrollTop = 0;
+      if (chatInput) chatInput.focus();
+    }
+    if (persist === false) return;
+    try {
+      localStorage.setItem("pp-chat-open", open ? "1" : "0");
+    } catch (e) {
+      /* localStorage may be unavailable (private mode); ignore. */
+    }
+  }
+
+  if (chatWidget) {
+    // Closed by default; only open if the user previously chose to.
+    var startOpen = false;
+    try {
+      startOpen = localStorage.getItem("pp-chat-open") === "1";
+    } catch (e) {
+      /* ignore */
+    }
+    setChatOpen(startOpen);
+  }
+
+  if (chatLauncher) {
+    chatLauncher.addEventListener("click", function () {
+      setChatOpen(!chatIsOpen());
+    });
+  }
+  if (chatCloseBtn) {
+    chatCloseBtn.addEventListener("click", function () {
+      setChatOpen(false);
     });
   }
 

@@ -80,24 +80,55 @@ const playerById = (st, id) => st.players.find((p) => p.id === id);
   const ROOM = 'test-' + PORT + '-' + Date.now();
   const REACTIONS = ['👍', '👎', '🎉', '😂', '🤔', '❤️', '🔥', '👏', '😮', '🚀'];
 
-  // 10 agents: agent-0 is the host/owner (joins first). agent-9 is a spectator.
-  const agents = Array.from({ length: 10 }, (_, i) => ({
+  // Agent count is configurable: `AGENTS=15 node test-demo.js` (default 10).
+  const N = Math.max(2, Number(process.env.AGENTS) || 10);
+
+  // N agents: agent-0 is the host/owner (joins first). The last is a spectator.
+  const agents = Array.from({ length: N }, (_, i) => ({
     id: 'agent-' + i,
     name: 'Agent ' + i,
-    isSpectator: i === 9,
+    isSpectator: i === N - 1,
   }));
   const host = agents[0];
-  const spectator = agents[9];
+  const spectator = agents[N - 1];
   const voters = agents.filter((a) => !a.isSpectator);
+  const V = voters.length; // number of voters (= N - 1)
 
-  console.log('\n=== Planning Poker — 10-agent functional test ===');
-  console.log('Room:', ROOM, '| voters:', voters.length, '| spectators: 1\n');
+  // Deterministic vote plan for any number of voters: mostly "5" (clear mode),
+  // a couple of outliers, plus "?" and "☕" as non-numeric values.
+  function makeVotePlan(v) {
+    const plan = new Array(v).fill('5');
+    if (v >= 3) plan[1] = '8';
+    if (v >= 4) plan[2] = '3';
+    if (v >= 2) plan[v - 1] = '?';
+    if (v >= 5) plan[v - 2] = '☕';
+    return plan;
+  }
+
+  // Mirror of lib/store.js computeStats so expectations track any vote plan.
+  function expectedStats(values) {
+    const cast = values.filter((x) => x !== null && x !== undefined);
+    const count = cast.length;
+    if (count === 0) return { average: null, mode: null, count: 0, agreement: false };
+    const nums = cast.map(Number).filter((n) => !Number.isNaN(n) && Number.isFinite(n));
+    let average = null;
+    if (nums.length) average = Math.round((nums.reduce((a, b) => a + b, 0) / nums.length) * 10) / 10;
+    const freq = new Map();
+    for (const v of cast) freq.set(v, (freq.get(v) || 0) + 1);
+    let mode = null, modeCount = 0;
+    for (const v of cast) { const c = freq.get(v); if (c > modeCount) { modeCount = c; mode = v; } }
+    const agreement = nums.length > 0 && nums.every((n) => n === nums[0]);
+    return { average, mode, count, agreement };
+  }
+
+  console.log('\n=== Planning Poker — ' + N + '-agent functional test ===');
+  console.log('Room:', ROOM, '| voters:', V, '| spectators: 1\n');
 
   // Clean slate: everyone leaves any prior instance of this room.
   await Promise.all(agents.map((a) => action({ type: 'leave', roomId: ROOM, playerId: a.id })));
 
   // --- 1. JOIN (concurrent) -------------------------------------------------
-  console.log('[1] Join — 10 agents concurrently');
+  console.log('[1] Join — ' + N + ' agents concurrently');
   // Host joins first (alone) so ownership is deterministic, then the rest race.
   await action({ type: 'join', roomId: ROOM, playerId: host.id, name: host.name, isSpectator: false });
   await Promise.all(
@@ -106,10 +137,10 @@ const playerById = (st, id) => st.players.find((p) => p.id === id);
     )
   );
   let st = await state(ROOM, host.id);
-  check('all 10 players present', st.players.length === 10, 'got ' + st.players.length);
+  check('all ' + N + ' players present', st.players.length === N, 'got ' + st.players.length);
   check('agent-0 is host', st.hostId === host.id, 'hostId=' + st.hostId);
-  check('agent-9 is spectator', !!(playerById(st, spectator.id) || {}).isSpectator);
-  check('9 non-spectators', st.players.filter((p) => !p.isSpectator).length === 9);
+  check('last agent is spectator', !!(playerById(st, spectator.id) || {}).isSpectator);
+  check(V + ' non-spectators', st.players.filter((p) => !p.isSpectator).length === V);
 
   // --- 2. SET TOPIC ---------------------------------------------------------
   console.log('[2] Set topic');
@@ -118,13 +149,14 @@ const playerById = (st, id) => st.players.find((p) => p.id === id);
   check('topic set', st.topic === 'DEMO-42: Checkout flow revamp', 'topic=' + JSON.stringify(st.topic));
 
   // --- 3. VOTING (concurrent) ----------------------------------------------
-  console.log('[3] Voting — 9 voters cast concurrently, mixed values');
-  const votePlan = ['5', '5', '5', '8', '3', '5', '?', '☕', '5']; // 9 values; mode should be "5"
+  console.log('[3] Voting — ' + V + ' voters cast concurrently, mixed values');
+  const votePlan = makeVotePlan(V); // mode should be "5"
+  const expStats = expectedStats(votePlan);
   await Promise.all(
     voters.map((a, i) => action({ type: 'vote', roomId: ROOM, playerId: a.id, value: votePlan[i] }))
   );
   st = await state(ROOM, host.id);
-  check('all 9 voters marked hasVoted', st.players.filter((p) => p.hasVoted).length === 9);
+  check('all ' + V + ' voters marked hasVoted', st.players.filter((p) => p.hasVoted).length === V);
   check('votes hidden before reveal', st.players.every((p) => p.vote === null));
   check('spectator did not vote', !playerById(st, spectator.id).hasVoted);
 
@@ -140,13 +172,16 @@ const playerById = (st, id) => st.players.find((p) => p.id === id);
   // --- 5. REACTIONS (all emojis, incl. spectator) --------------------------
   console.log('[5] Reactions — every emoji, spectator included');
   const reactResults = await Promise.all(
-    REACTIONS.map((e, i) =>
-      action({ type: 'react', roomId: ROOM, playerId: agents[i].id, emoji: e })
-    )
+    // One reaction per emoji; senders wrap around the agent list, and the
+    // spectator always sends the last one so their inclusion is asserted.
+    REACTIONS.map((e, i) => {
+      const sender = i === REACTIONS.length - 1 ? spectator : agents[i % N];
+      return action({ type: 'react', roomId: ROOM, playerId: sender.id, emoji: e });
+    })
   );
-  check('all 10 reactions accepted', reactResults.every((r) => r.ok === true));
+  check('all ' + REACTIONS.length + ' reactions accepted', reactResults.every((r) => r.ok === true));
   st = await state(ROOM, host.id);
-  check('reactions present in state', (st.reactions || []).length >= 10, 'count=' + (st.reactions || []).length);
+  check('reactions present in state', (st.reactions || []).length >= REACTIONS.length, 'count=' + (st.reactions || []).length);
   check('reactions carry sender name + id', (st.reactions || []).every((r) => r.by && r.id));
   const specReacted = (st.reactions || []).some((r) => r.by === spectator.name);
   check('spectator reaction included', specReacted);
@@ -183,21 +218,21 @@ const playerById = (st, id) => st.players.find((p) => p.id === id);
   check('host reveal ok', revealed.ok === true);
   st = await state(ROOM, host.id);
   check('room revealed', st.revealed === true);
-  check('votes now visible', st.players.filter((p) => p.vote !== null).length === 9);
+  check('votes now visible', st.players.filter((p) => p.vote !== null).length === V);
 
   // --- 7. STATS -------------------------------------------------------------
   console.log('[7] Stats');
-  // Numeric votes: 5,5,5,8,3,5,5 => avg = 36/7 ≈ 5.1 ; mode = 5 ; count = 9 (incl ?,☕)
-  check('stats.count = 9', st.stats.count === 9, 'count=' + st.stats.count);
-  check('stats.mode = 5', String(st.stats.mode) === '5', 'mode=' + st.stats.mode);
-  check('stats.average ≈ 5.1', st.stats.average === 5.1, 'avg=' + st.stats.average);
-  check('no agreement (mixed votes)', st.stats.agreement === false);
+  // Expectations computed from the vote plan via the same algorithm as the server.
+  check('stats.count = ' + expStats.count, st.stats.count === expStats.count, 'count=' + st.stats.count);
+  check('stats.mode = ' + expStats.mode, String(st.stats.mode) === String(expStats.mode), 'mode=' + st.stats.mode);
+  check('stats.average ≈ ' + expStats.average, st.stats.average === expStats.average, 'avg=' + st.stats.average);
+  check('no agreement (mixed votes)', st.stats.agreement === expStats.agreement);
 
   // --- 8. HISTORY -----------------------------------------------------------
   console.log('[8] History — reveal recorded a round');
   check('history has 1 round', st.history.length === 1, 'len=' + st.history.length);
   check('history round topic captured', st.history[0].topic === 'DEMO-42: Checkout flow revamp');
-  check('history round has 9 votes', st.history[0].votes.length === 9);
+  check('history round has ' + V + ' votes', st.history[0].votes.length === V, 'len=' + st.history[0].votes.length);
 
   // --- 9. VOTE-AFTER-REVEAL GUARD ------------------------------------------
   console.log('[9] Guard — voting closed after reveal');
@@ -259,9 +294,11 @@ const playerById = (st, id) => st.players.find((p) => p.id === id);
 
   // --- 15. LEAVE + host reassignment ---------------------------------------
   console.log('[15] Leave — a player leaves, count drops');
-  await action({ type: 'leave', roomId: ROOM, playerId: agents[8].id });
+  // A non-host, non-spectator player near the end leaves.
+  const leaver = agents[N - 2];
+  await action({ type: 'leave', roomId: ROOM, playerId: leaver.id });
   st = await state(ROOM, host.id);
-  check('player count now 9', st.players.length === 9, 'count=' + st.players.length);
+  check('player count now ' + (N - 1), st.players.length === N - 1, 'count=' + st.players.length);
   check('host still agent-0 after non-host leave', st.hostId === host.id);
 
   // --- Tear down the isolated test room; seed a separate viewable demo room -
@@ -271,26 +308,26 @@ const playerById = (st, id) => st.players.find((p) => p.id === id);
   // The viewable room uses a stable id so the link is easy to open. It's OK if a
   // browser tab is already here — we just (re)seed the agents around it.
   const DEMO = 'demo-' + PORT;
-  const demoAgents = Array.from({ length: 10 }, (_, i) => ({
+  const demoAgents = Array.from({ length: N }, (_, i) => ({
     id: 'agent-' + i,
     name: 'Agent ' + i,
-    isSpectator: i === 9,
+    isSpectator: i === N - 1,
   }));
   for (const a of demoAgents) {
     await action({ type: 'join', roomId: DEMO, playerId: a.id, name: a.name, isSpectator: a.isSpectator });
   }
   await action({ type: 'setTopic', roomId: DEMO, playerId: 'agent-0', topic: 'DEMO-101: Live demo — click Reveal!' });
-  const demoVotes = ['3', '5', '5', '8', '5', '2', '5', '?', '☕']; // 9 voters
   const demoVoters = demoAgents.filter((a) => !a.isSpectator);
+  const demoVotes = makeVotePlan(demoVoters.length);
   for (let i = 0; i < demoVoters.length; i++) {
     await action({ type: 'vote', roomId: DEMO, playerId: demoVoters[i].id, value: demoVotes[i] });
   }
-  // Seed a short chat conversation so the left panel isn't empty on open.
+  // Seed a short chat conversation so the chat widget isn't empty on open.
   const demoChat = [
     ['agent-0', 'Morning all 👋 let\'s point DEMO-101.'],
     ['agent-1', 'On it — this looks like a 5 to me.'],
-    ['agent-3', 'I went 8, the migration worries me 😅'],
-    ['agent-9', 'Spectating today, will keep notes 👀'],
+    [agents[Math.min(3, N - 1)].id, 'I went 8, the migration worries me 😅'],
+    [spectator.id, 'Spectating today, will keep notes 👀'],
     ['agent-0', 'Fair — let\'s reveal and talk it through 🔥'],
   ];
   for (const [id, text] of demoChat) {
