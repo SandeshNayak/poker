@@ -39,6 +39,8 @@ function readJsonBody(req) {
 const ACTIONS = {
   join: (roomId, playerId, body) => store.join(roomId, playerId, body.name, body.isSpectator),
   vote: (roomId, playerId, body) => store.vote(roomId, playerId, body.value),
+  react: (roomId, playerId, body) => store.react(roomId, playerId, body.emoji),
+  chat: (roomId, playerId, body) => store.sendChat(roomId, playerId, body.text),
   reveal: (roomId, playerId) => store.reveal(roomId, playerId),
   reset: (roomId, playerId) => store.reset(roomId, playerId),
   newRound: (roomId, playerId) => store.newRound(roomId, playerId),

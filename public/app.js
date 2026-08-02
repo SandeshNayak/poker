@@ -15,6 +15,10 @@
   var PLAYER_ID_STORAGE_KEY = "planningPoker.playerId";
   var POLL_INTERVAL_MS = 1500;
 
+  // Emoji reactions everyone can send. Must stay in sync with the server-side
+  // ALLOWED_REACTIONS allow-list in lib/store.js.
+  var REACTION_EMOJIS = ["👍", "👎", "🎉", "😂", "🤔", "❤️", "🔥", "👏", "😮", "🚀"];
+
   function clearChildren(el) {
     while (el.firstChild) {
       el.removeChild(el.firstChild);
@@ -125,6 +129,12 @@
 
   var topicInput = document.getElementById("topic-input");
   var playersGrid = document.getElementById("players-grid");
+  var rosterCount = document.getElementById("roster-count");
+
+  var chatList = document.getElementById("chat-list");
+  var chatEmpty = document.getElementById("chat-empty");
+  var chatForm = document.getElementById("chat-form");
+  var chatInput = document.getElementById("chat-input");
 
   var statsSection = document.getElementById("stats-section");
   var statAverage = document.getElementById("stat-average");
@@ -138,6 +148,8 @@
   var hostHint = document.getElementById("host-hint");
 
   var deckSection = document.getElementById("deck-section");
+  var deckGroup = document.getElementById("deck-group");
+  var dockDivider = document.getElementById("dock-divider");
   var deckEl = document.getElementById("deck");
 
   var historyList = document.getElementById("history-list");
@@ -146,6 +158,9 @@
   var clearHistoryBtn = document.getElementById("clear-history-btn");
 
   var toastContainer = document.getElementById("toast-container");
+
+  var reactionBar = document.getElementById("reaction-bar");
+  var reactionLayer = document.getElementById("reaction-layer");
 
   // Tracks how many history rounds we've already rendered, so a newly
   // added round can animate in rather than the whole list re-flashing.
@@ -477,6 +492,91 @@
   buildDeck();
 
   // ------------------------------------------------------------------
+  // Emoji reactions
+  //
+  // Sending a reaction is a normal action; the server stores it briefly and
+  // every client's poll picks it up (see renderReactions). We animate each
+  // reaction id exactly once — including our own — so what everyone sees is
+  // driven purely by shared state, keeping all clients consistent.
+  // ------------------------------------------------------------------
+  function sendReaction(emoji) {
+    apiAction("react", { emoji: emoji });
+  }
+
+  function buildReactionBar() {
+    if (!reactionBar) return;
+    clearChildren(reactionBar);
+    REACTION_EMOJIS.forEach(function (emoji) {
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "reaction-btn";
+      btn.textContent = emoji;
+      btn.setAttribute("aria-label", "React with " + emoji);
+      btn.title = "React " + emoji;
+      btn.addEventListener("click", function () {
+        sendReaction(emoji);
+      });
+      reactionBar.appendChild(btn);
+    });
+  }
+
+  // Reactions already floated, so a reaction seen across multiple polls only
+  // animates once. Kept bounded so it can't grow without limit in a long session.
+  var seenReactionIds = Object.create(null);
+  var seenReactionOrder = [];
+
+  function markReactionSeen(id) {
+    seenReactionIds[id] = true;
+    seenReactionOrder.push(id);
+    if (seenReactionOrder.length > 200) {
+      var old = seenReactionOrder.shift();
+      delete seenReactionIds[old];
+    }
+  }
+
+  function floatReaction(reaction) {
+    if (!reactionLayer) return;
+    var el = document.createElement("div");
+    el.className = "reaction-float";
+    // Random horizontal lane + slight drift/scale variation so a burst of the
+    // same emoji doesn't stack into a single column.
+    var lane = 8 + Math.random() * 84; // vw
+    var drift = (Math.random() * 2 - 1) * 40; // px
+    var delay = Math.random() * 0.15; // s
+    el.style.left = lane + "vw";
+    el.style.setProperty("--drift", drift + "px");
+    el.style.animationDelay = delay + "s";
+
+    var glyph = document.createElement("span");
+    glyph.className = "reaction-float-glyph";
+    glyph.textContent = reaction.emoji;
+    el.appendChild(glyph);
+
+    if (reaction.by) {
+      var who = document.createElement("span");
+      who.className = "reaction-float-who";
+      who.textContent = reaction.by;
+      el.appendChild(who);
+    }
+
+    el.addEventListener("animationend", function () {
+      el.remove();
+    });
+    reactionLayer.appendChild(el);
+  }
+
+  function renderReactions(reactions) {
+    if (!reactionLayer || !reactions || !reactions.length) return;
+    reactions.forEach(function (reaction) {
+      if (!reaction || !reaction.id || seenReactionIds[reaction.id]) return;
+      markReactionSeen(reaction.id);
+      floatReaction(reaction);
+    });
+  }
+
+  buildReactionBar();
+
+  // ------------------------------------------------------------------
   // Reveal / reset
   // ------------------------------------------------------------------
   revealBtn.addEventListener("click", function () {
@@ -534,8 +634,11 @@
     }
     spectatorTag.classList.toggle("hidden", !selfIsSpectator);
 
-    // Show/hide the voting deck for spectators
-    deckSection.classList.toggle("hidden", selfIsSpectator);
+    // Spectators can't pick a card, so hide the card-picking group (and its
+    // divider) — but keep the reaction bar in the same dock, since spectators
+    // are allowed to react.
+    if (deckGroup) deckGroup.classList.toggle("hidden", selfIsSpectator);
+    if (dockDivider) dockDivider.classList.toggle("hidden", selfIsSpectator);
 
     // Sync selected vote from server state for self (in case of reconnect)
     if (self && !state.revealed) {
@@ -546,9 +649,12 @@
     }
     highlightSelectedDeckCard();
 
+    renderRoster(players, state.revealed);
     renderPlayers(players, state.revealed, state.hostId);
     renderStats(state.stats, state.revealed);
     renderHistory(state.history || []);
+    renderReactions(state.reactions || []);
+    renderChat(state.chat || []);
 
     // Host-only controls: only the host may reveal/reset
     var amHost = !!(state.hostId && state.hostId === selfId);
@@ -611,9 +717,10 @@
     var avatar = document.createElement("div");
     avatar.className = "player-avatar";
     var hue = hueFor(name);
+    // Vivid dual-tone gradient — a wider hue sweep reads as more playful/colorful.
     avatar.style.background =
-      "linear-gradient(135deg, hsl(" + hue + ",70%,58%) 0%, hsl(" +
-      ((hue + 40) % 360) + ",72%,48%) 100%)";
+      "linear-gradient(135deg, hsl(" + hue + ",85%,62%) 0%, hsl(" +
+      ((hue + 70) % 360) + ",80%,50%) 100%)";
     avatar.textContent = initialsFor(name);
     return avatar;
   }
@@ -631,24 +738,28 @@
 
     card.appendChild(buildAvatar(player.name));
 
+    // Compact vote indicator (a small chip) instead of a full-size card face,
+    // so many seats fit without overflowing into the deck. State is conveyed by
+    // the chip + a ring on the card: 👁 spectator, ✓ voted (hidden), the value
+    // on reveal, and a faint empty chip while still deciding.
     var face = document.createElement("div");
+    face.className = "vote-chip";
 
     if (player.isSpectator) {
-      face.className = "player-card-face";
-      var eye = document.createElement("span");
-      eye.className = "spectator-eye";
-      eye.textContent = "👁";
-      face.appendChild(eye);
+      face.classList.add("is-eye");
+      face.textContent = "👁";
     } else if (revealed) {
-      face.className = "vote-card state-revealed";
+      face.classList.add("is-value");
       face.textContent =
-        player.vote !== null && player.vote !== undefined ? player.vote : "-";
+        player.vote !== null && player.vote !== undefined ? player.vote : "–";
     } else if (player.hasVoted) {
-      face.className = "vote-card state-hidden";
-      face.textContent = "🂠";
+      card.classList.add("is-voted");
+      face.classList.add("is-check");
+      face.textContent = "✓";
     } else {
-      face.className = "vote-card state-empty";
-      face.textContent = "waiting";
+      card.classList.add("is-waiting");
+      face.classList.add("is-idle");
+      face.textContent = "";
     }
 
     var name = document.createElement("div");
@@ -695,6 +806,101 @@
 
     players.forEach(function (player) {
       playersGrid.appendChild(buildPlayerCard(player, revealed, hostId));
+    });
+  }
+
+  // ------------------------------------------------------------------
+  // Voted-count chip (left panel header)
+  //
+  // The left panel is now a live chat; the "N ✓" chip keeps the at-a-glance
+  // voting progress that the old roster used to convey.
+  // ------------------------------------------------------------------
+  function renderRoster(players, revealed) {
+    if (!rosterCount) return;
+    var votedNum = players.filter(function (p) {
+      return !p.isSpectator && p.hasVoted;
+    }).length;
+    var voters = players.filter(function (p) {
+      return !p.isSpectator;
+    }).length;
+    rosterCount.textContent = votedNum + "/" + voters + " ✓";
+  }
+
+  // ------------------------------------------------------------------
+  // Live chat (left panel)
+  //
+  // Messages ride the same polling model as reactions: `chat` action stores a
+  // message in room state, and each poll appends any messages we haven't shown
+  // yet (tracked by id) so we don't re-render the whole log every 1.5s.
+  // ------------------------------------------------------------------
+  var seenChatIds = Object.create(null);
+  var chatInitialized = false;
+
+  function appendChatMessage(msg) {
+    if (!chatList) return;
+    var li = document.createElement("li");
+    li.className = "chat-msg";
+    if (msg.byId === selfId) li.classList.add("is-self");
+
+    var head = document.createElement("div");
+    head.className = "chat-msg-head";
+    head.appendChild(buildAvatar(msg.by));
+    var who = document.createElement("span");
+    who.className = "chat-msg-who";
+    who.textContent = msg.byId === selfId ? "You" : msg.by;
+    head.appendChild(who);
+    li.appendChild(head);
+
+    var body = document.createElement("div");
+    body.className = "chat-msg-text";
+    body.textContent = msg.text; // textContent → no HTML injection
+    li.appendChild(body);
+
+    // Newest-first: put each new message at the top of the list.
+    chatList.insertBefore(li, chatList.firstChild);
+  }
+
+  function renderChat(chat) {
+    if (!chatList) return;
+    var fresh = [];
+    for (var i = 0; i < chat.length; i++) {
+      var m = chat[i];
+      if (m && m.id && !seenChatIds[m.id]) {
+        seenChatIds[m.id] = true;
+        fresh.push(m);
+      }
+    }
+    if (!fresh.length) {
+      if (!chatInitialized && chatEmpty) {
+        chatEmpty.classList.toggle("hidden", chat.length > 0);
+      }
+      return;
+    }
+    if (chatEmpty) chatEmpty.classList.add("hidden");
+
+    // Newest messages are inserted at the top. Was the user already scrolled to
+    // (near) the top? If so, keep them pinned to the newest message; otherwise
+    // leave their scroll position alone so they can read older messages.
+    var nearTop = chatList.scrollTop < 60;
+
+    fresh.forEach(appendChatMessage);
+    chatInitialized = true;
+
+    if (nearTop) chatList.scrollTop = 0;
+  }
+
+  function sendChat() {
+    if (!chatInput) return;
+    var text = chatInput.value.trim();
+    if (!text) return;
+    chatInput.value = "";
+    apiAction("chat", { text: text });
+  }
+
+  if (chatForm) {
+    chatForm.addEventListener("submit", function (e) {
+      e.preventDefault();
+      sendChat();
     });
   }
 

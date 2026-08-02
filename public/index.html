@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Planning Poker — Agile Sprint Estimation</title>
   <meta name="description" content="Real-time Planning Poker for agile sprint estimation." />
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%236366f1'/%3E%3Cpath fill='%23ffffff' d='M16 7 C12 13 7 15 7 20 a5 5 0 0 0 9 3 c-0.6 3 -1.8 5 -3.4 6.2 h6.8 c-1.6 -1.2 -2.8 -3.2 -3.4 -6.2 a5 5 0 0 0 9 -3 c0 -5 -5 -7 -9 -13 z'/%3E%3C/svg%3E" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%237c3aed'/%3E%3Cpath fill='%23ffffff' d='M16 7 C12 13 7 15 7 20 a5 5 0 0 0 9 3 c-0.6 3 -1.8 5 -3.4 6.2 h6.8 c-1.6 -1.2 -2.8 -3.2 -3.4 -6.2 a5 5 0 0 0 9 -3 c0 -5 -5 -7 -9 -13 z'/%3E%3C/svg%3E" />
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
@@ -16,16 +16,18 @@
   <!-- Name entry modal -->
   <div id="join-modal" class="modal-overlay">
     <div class="modal-card">
-      <span class="logo-mark logo-mark--lg logo-mark--brand" aria-hidden="true">
-        <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-          <path fill="#ffffff" d="M16 7 C12 13 7 15 7 20 a5 5 0 0 0 9 3
-            c-0.6 3 -1.8 5 -3.4 6.2 h6.8 c-1.6 -1.2 -2.8 -3.2 -3.4 -6.2
-            a5 5 0 0 0 9 -3 c0 -5 -5 -7 -9 -13 z" />
-        </svg>
-      </span>
-      <h1 class="modal-title">
-        <span class="modal-title-text">Planning Poker</span>
-      </h1>
+      <div class="modal-brand">
+        <span class="logo-mark logo-mark--lg logo-mark--brand" aria-hidden="true">
+          <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+            <path fill="#ffffff" d="M16 7 C12 13 7 15 7 20 a5 5 0 0 0 9 3
+              c-0.6 3 -1.8 5 -3.4 6.2 h6.8 c-1.6 -1.2 -2.8 -3.2 -3.4 -6.2
+              a5 5 0 0 0 9 -3 c0 -5 -5 -7 -9 -13 z" />
+          </svg>
+        </span>
+        <h1 class="modal-title">
+          <span class="modal-title-text">Planning Poker</span>
+        </h1>
+      </div>
       <p class="modal-subtitle" id="modal-subtitle">Enter your name to join the estimation session.</p>
       <form id="join-form">
         <label class="field-label" for="name-input">Your name</label>
@@ -51,124 +53,172 @@
 
   <!-- Main app -->
   <div id="app" class="app hidden">
-    <header class="app-header">
-      <div class="header-top">
-        <div class="brand">
-          <span class="logo-mark logo-mark--onbrand" aria-hidden="true">
-            <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-              <rect x="1" y="1" width="30" height="30" rx="8"
-                fill="#ffffff" stroke="rgba(15,23,42,0.06)" stroke-width="1" />
-              <path fill="#6366f1" d="M16 7 C12 13 7 15 7 20 a5 5 0 0 0 9 3
-                c-0.6 3 -1.8 5 -3.4 6.2 h6.8 c-1.6 -1.2 -2.8 -3.2 -3.4 -6.2
-                a5 5 0 0 0 9 -3 c0 -5 -5 -7 -9 -13 z" />
-            </svg>
-          </span>
-          <span class="brand-name">Planning Poker</span>
-        </div>
 
-        <div class="user-welcome">
-          <span class="user-label">Welcome,</span>
-          <span id="user-name" class="user-name-label">Guest</span>
-          <span id="spectator-tag" class="tag tag-spectator hidden">Spectator</span>
-        </div>
+    <!-- Slim top bar: brand · invite · you -->
+    <header class="topbar">
+      <div class="brand">
+        <span class="logo-mark logo-mark--onbrand" aria-hidden="true">
+          <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+            <rect x="1" y="1" width="30" height="30" rx="8"
+              fill="#7c3aed" stroke="rgba(15,23,42,0.06)" stroke-width="1" />
+            <path fill="#ffffff" d="M16 7 C12 13 7 15 7 20 a5 5 0 0 0 9 3
+              c-0.6 3 -1.8 5 -3.4 6.2 h6.8 c-1.6 -1.2 -2.8 -3.2 -3.4 -6.2
+              a5 5 0 0 0 9 -3 c0 -5 -5 -7 -9 -13 z" />
+          </svg>
+        </span>
+        <span class="brand-name">Planning Poker</span>
       </div>
 
-      <input id="invite-url" class="invite-input" type="text" readonly />
-
-      <div class="header-actions">
-        <button id="copy-link-btn" class="btn btn-secondary">Copy invite link</button>
-        <button id="reveal-btn" class="btn btn-primary">Reveal cards</button>
-        <button id="reset-btn" class="btn btn-secondary">Reset round</button>
-        <button id="new-round-btn" class="btn btn-secondary">New round</button>
+      <div class="topbar-invite">
+        <input id="invite-url" class="invite-input" type="text" readonly />
+        <button id="copy-link-btn" class="btn btn-ghost">Copy link</button>
       </div>
-      <p id="host-hint" class="host-hint hidden">Only the host can reveal cards, reset the round, or start a new one.</p>
+
+      <div class="user-welcome">
+        <span class="user-label">You:</span>
+        <span id="user-name" class="user-name-label">Guest</span>
+        <span id="spectator-tag" class="tag tag-spectator hidden">Spectator</span>
+      </div>
     </header>
 
-    <div class="content-row">
-    <aside id="deck-section" class="deck-section deck-panel">
-      <h2 class="deck-title"><span class="deck-title-emoji">🃏</span><span class="deck-title-text">Your cards</span></h2>
-      <p class="deck-subtitle">Pick your estimate</p>
-      <div id="deck" class="deck"></div>
-    </aside>
+    <p id="host-hint" class="host-hint hidden">Only the host can reveal cards, reset the round, or start a new one.</p>
 
-    <main class="main-content">
-      <section class="topic-section">
-        <label class="field-label" for="topic-input">Note</label>
-        <input
-          id="topic-input"
-          class="text-input topic-input"
-          type="text"
-          placeholder="Add your notes here"
-        />
-      </section>
+    <!-- Stage: roster dashboard (left) · table (center) · history (right) -->
+    <div class="stage">
+      <aside class="chat-panel">
+        <div class="roster-header">
+          <h2 class="roster-title"><span class="chat-title-emoji">💬</span> Chat</h2>
+          <span id="roster-count" class="roster-count" title="Players who have voted">0 ✓</span>
+        </div>
+        <form id="chat-form" class="chat-form" autocomplete="off">
+          <input
+            id="chat-input"
+            class="chat-input"
+            type="text"
+            maxlength="300"
+            placeholder="Type a message…"
+            aria-label="Chat message"
+          />
+          <button type="submit" id="chat-send-btn" class="chat-send-btn" aria-label="Send">➤</button>
+        </form>
+        <ol id="chat-list" class="chat-list"></ol>
+        <p id="chat-empty" class="chat-empty">No messages yet. Say hi 👋</p>
+      </aside>
 
-      <section class="table-section">
-        <div id="players-grid" class="players-grid"></div>
-      </section>
+      <main class="stage-main">
 
-      <section id="stats-section" class="stats-section hidden">
-        <div class="stats-grid">
-          <div class="stat-box">
-            <span class="stat-value" id="stat-average">-</span>
-            <span class="stat-label">Average</span>
+        <section class="topic-section">
+          <label class="field-label" for="topic-input">Story / note being estimated</label>
+          <input
+            id="topic-input"
+            class="text-input topic-input"
+            type="text"
+            placeholder="What are we pointing? Add the story or a note…"
+          />
+        </section>
+
+        <!-- The poker table: actions + results on top, players seated below -->
+        <section class="table-section">
+          <div class="poker-table">
+            <div class="table-center">
+              <div id="stats-section" class="stats-section hidden">
+                <div class="stats-grid">
+                  <div class="stat-box">
+                    <span class="stat-value" id="stat-average">-</span>
+                    <span class="stat-label">Average</span>
+                  </div>
+                  <div class="stat-box">
+                    <span class="stat-value" id="stat-mode">-</span>
+                    <span class="stat-label">Mode</span>
+                  </div>
+                  <div class="stat-box">
+                    <span class="stat-value" id="stat-count">-</span>
+                    <span class="stat-label">Votes</span>
+                  </div>
+                </div>
+                <div id="agreement-badge" class="agreement-badge hidden">✔ Agreement!</div>
+              </div>
+            </div>
+
+            <div id="players-grid" class="players-grid"></div>
           </div>
-          <div class="stat-box">
-            <span class="stat-value" id="stat-mode">-</span>
-            <span class="stat-label">Mode</span>
-          </div>
-          <div class="stat-box">
-            <span class="stat-value" id="stat-count">-</span>
-            <span class="stat-label">Votes</span>
+        </section>
+      </main>
+
+      <aside id="history-panel" class="history-panel">
+        <div class="history-header">
+          <h2 class="history-title"><span class="history-title-emoji">📜</span><span class="history-title-text">Voting history</span></h2>
+          <div class="history-header-right">
+            <span id="history-count" class="history-count">0</span>
+            <button id="clear-history-btn" class="clear-history-btn hidden" title="Clear round history">Clear</button>
           </div>
         </div>
-        <div id="agreement-badge" class="agreement-badge hidden">✔ Agreement!</div>
-      </section>
-    </main>
-
-    <aside id="history-panel" class="history-panel">
-      <div class="history-header">
-        <h2 class="history-title"><span class="history-title-emoji">📜</span><span class="history-title-text">Round history</span></h2>
-        <div class="history-header-right">
-          <span id="history-count" class="history-count">0</span>
-          <button id="clear-history-btn" class="clear-history-btn hidden" title="Clear round history">Clear</button>
-        </div>
-      </div>
-      <p id="history-empty" class="history-empty">
-        No rounds yet. Revealed rounds will appear here.
-      </p>
-      <ol id="history-list" class="history-list"></ol>
-    </aside>
+        <p id="history-empty" class="history-empty">
+          No rounds yet. Revealed rounds will appear here.
+        </p>
+        <ol id="history-list" class="history-list"></ol>
+      </aside>
     </div>
 
-    <footer class="app-footer">
-      <div class="poker-logo" aria-label="Planning Poker logo" role="img">
-        <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <linearGradient id="ppg" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0" stop-color="#6366f1" />
-              <stop offset="0.55" stop-color="#8b5cf6" />
-              <stop offset="1" stop-color="#ec4899" />
-            </linearGradient>
-          </defs>
-          <!-- back card, tilted -->
-          <rect x="30" y="24" width="52" height="72" rx="10"
-            fill="#ffffff" stroke="#dbe4f5" stroke-width="2"
-            transform="rotate(-12 56 60)" />
-          <!-- front card -->
-          <rect x="40" y="26" width="52" height="72" rx="10"
-            fill="url(#ppg)" transform="rotate(9 66 62)" />
-          <!-- spade pip on the front card -->
-          <g transform="rotate(9 66 62)" fill="#ffffff">
-            <path d="M66 44 C58 54 50 58 50 66 a8 8 0 0 0 14 5
-              c-1 5 -3 8 -6 10 h16 c-3 -2 -5 -5 -6 -10
-              a8 8 0 0 0 14 -5 c0 -8 -8 -12 -16 -22 z" />
-          </g>
-        </svg>
+    <!-- Bottom dock: top row = React + Controls, cards row below. -->
+    <section id="deck-section" class="deck-section deck-dock">
+      <div class="dock-row">
+        <div class="dock-group">
+          <div class="deck-dock-head">
+            <span class="deck-title-emoji">💬</span>
+            <span class="deck-title-text">React</span>
+          </div>
+          <div id="reaction-bar" class="reaction-bar" role="group" aria-label="Send a reaction"></div>
+        </div>
+
+        <div class="dock-divider" aria-hidden="true"></div>
+
+        <div id="controls-group" class="dock-group">
+          <div class="deck-dock-head">
+            <span class="deck-title-emoji">🎛️</span>
+            <span class="deck-title-text">Controls</span>
+          </div>
+          <div class="table-actions">
+            <button id="reveal-btn" class="btn btn-primary">Reveal cards</button>
+            <button id="reset-btn" class="btn btn-secondary">Reset round</button>
+            <button id="new-round-btn" class="btn btn-secondary">New round</button>
+          </div>
+        </div>
       </div>
-      <div class="footer-brand">Planning Poker</div>
-      <div>Built for agile sprint estimation</div>
-      <div class="app-credit">Developed by Sandesh Nayak</div>
-      <div class="app-version">v.1.0</div>
+
+      <div id="dock-divider" class="dock-divider dock-divider-h" aria-hidden="true"></div>
+
+      <div id="deck-group" class="dock-group dock-group-cards">
+        <div class="deck-dock-head">
+          <span class="deck-title-emoji">🃏</span>
+          <span class="deck-title-text">Pick your card</span>
+        </div>
+        <div id="deck" class="deck"></div>
+      </div>
+    </section>
+
+    <!-- Full-viewport layer the reactions float up through. -->
+    <div id="reaction-layer" class="reaction-layer" aria-hidden="true"></div>
+
+    <footer class="app-footer">
+      <div class="footer-brand-row">
+        <span class="logo-mark footer-logo" aria-hidden="true">
+          <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+            <rect x="1" y="1" width="30" height="30" rx="8"
+              fill="#7c3aed" stroke="rgba(15,23,42,0.06)" stroke-width="1" />
+            <path fill="#ffffff" d="M16 7 C12 13 7 15 7 20 a5 5 0 0 0 9 3
+              c-0.6 3 -1.8 5 -3.4 6.2 h6.8 c-1.6 -1.2 -2.8 -3.2 -3.4 -6.2
+              a5 5 0 0 0 9 -3 c0 -5 -5 -7 -9 -13 z" />
+          </svg>
+        </span>
+        <span class="footer-brand">Planning Poker</span>
+      </div>
+      <div class="footer-meta">
+        <span>Built for agile sprint estimation</span>
+      </div>
+      <div class="footer-meta">
+        <span class="app-credit">Developed by Sandesh Nayak</span>
+      </div>
     </footer>
   </div>
 

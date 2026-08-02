@@ -1,40 +1,48 @@
 /* ========================================================================
-   Planning Poker — styles
+   Planning Poker — Kollabe-inspired redesign
+   ------------------------------------------------------------------------
+   A calm, minimal estimation room: a slim top bar, a central green "felt"
+   poker table with players seated around it and the action/results in the
+   middle, a voting-history rail, and the card deck docked along the bottom.
+   All element IDs and dynamic class names from app.js are preserved so the
+   behaviour is unchanged — only the presentation is new.
    ======================================================================== */
 
 :root {
-  /* Professional blue/slate palette — a single confident accent on calm
-     neutrals. Reads as a business/enterprise tool, not a toy. */
-  --color-primary: #6366f1;       /* indigo-500 */
-  --color-primary-dark: #4f46e5;  /* indigo-600 */
-  --color-primary-light: #eef2ff; /* faint indigo tint for hovers/fills */
-  --color-accent: #818cf8;        /* indigo-400 */
-  --color-bg: #f1f5f9;            /* slate-100 */
+  /* Kollabe's signature violet/purple accent on cool neutrals. */
+  --color-primary: #7c3aed;        /* violet-600 */
+  --color-primary-dark: #6d28d9;   /* violet-700 */
+  --color-primary-light: #f3edff;  /* faint violet tint for hovers/fills */
+  --color-accent: #8b5cf6;         /* violet-500 */
+
+  --color-bg: #f4f4f8;
   --color-surface: #ffffff;
-  --color-border: #e2e8f0;        /* slate-200 */
-  --color-text: #0f172a;          /* slate-900 */
-  --color-text-muted: #64748b;    /* slate-500 */
+  --color-border: #e5e7eb;         /* gray-200 */
+  --color-text: #111827;           /* gray-900 */
+  --color-text-muted: #6b7280;     /* gray-500 */
   --color-success: #16a34a;
   --color-success-bg: #dcfce7;
   --color-danger: #dc2626;
-  --color-spectator: #94a3b8;     /* slate-400 */
+  --color-spectator: #9ca3af;      /* gray-400 */
 
-  /* Brand gradient — the original indigo → purple → pink blend, restored. */
-  --gradient-brand: linear-gradient(135deg, #6366f1 0%, #8b5cf6 55%, #ec4899 120%);
-  --gradient-brand-soft: linear-gradient(135deg, #eef2ff 0%, #f5f0ff 100%);
+  /* The poker table — a clean white surface with a soft rail. */
+  --felt: radial-gradient(130% 130% at 50% 15%, #ffffff 0%, #fbfbfd 55%, #f4f5f9 100%);
+  --felt-rail: #e5e7eb;
+  --felt-line: rgba(17, 24, 39, 0.08);
 
-  /* Frosted-glass surface used for panels and the header. */
-  --glass-bg: rgba(255, 255, 255, 0.78);
-  --glass-border: rgba(226, 232, 240, 0.9);
-
-  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.05);
-  --shadow-md: 0 6px 16px rgba(15, 23, 42, 0.07), 0 2px 6px rgba(15, 23, 42, 0.05);
-  --shadow-lg: 0 16px 40px rgba(15, 23, 42, 0.12), 0 5px 12px rgba(15, 23, 42, 0.06);
-  --shadow-glow: 0 8px 24px rgba(99, 102, 241, 0.28);
+  --shadow-sm: 0 1px 2px rgba(17, 24, 39, 0.05), 0 1px 3px rgba(17, 24, 39, 0.06);
+  --shadow-md: 0 6px 16px rgba(17, 24, 39, 0.08), 0 2px 6px rgba(17, 24, 39, 0.05);
+  --shadow-lg: 0 18px 44px rgba(17, 24, 39, 0.16), 0 6px 14px rgba(17, 24, 39, 0.07);
+  --shadow-glow: 0 8px 22px rgba(124, 58, 237, 0.30);
 
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 18px;
+
+  /* Vertical space the sticky bottom dock occupies. The sticky side panels
+     (chat, history) subtract this from their height so the dock never floats
+     over them while scrolling. */
+  --dock-clear: 236px;
 
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
     Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
@@ -52,12 +60,7 @@ html, body {
 
 body {
   font-family: var(--font-sans);
-  background:
-    radial-gradient(720px 520px at 12% -8%, rgba(129, 140, 248, 0.28) 0%, rgba(129, 140, 248, 0) 60%),
-    radial-gradient(680px 520px at 92% 4%, rgba(236, 72, 153, 0.18) 0%, rgba(236, 72, 153, 0) 58%),
-    radial-gradient(900px 620px at 50% 120%, rgba(139, 92, 246, 0.16) 0%, rgba(139, 92, 246, 0) 60%),
-    linear-gradient(180deg, #eef1fb 0%, #f5f6fc 320px, #f4f6fb 100%);
-  background-attachment: fixed;
+  background: var(--color-bg);
   color: var(--color-text);
   -webkit-font-smoothing: antialiased;
 }
@@ -92,21 +95,14 @@ body {
   animation: toast-in 0.2s ease-out;
 }
 
-/* Success / info toast (e.g. "Invite link copied!") — brand theme, not red. */
 .toast.toast-success {
-  background: var(--gradient-brand);
+  background: var(--color-primary);
   box-shadow: var(--shadow-glow);
 }
 
 @keyframes toast-in {
-  from {
-    opacity: 0;
-    transform: translateY(-8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 /* ------------------------------------------------------------------------
@@ -116,8 +112,8 @@ body {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(30, 34, 51, 0.45);
-  backdrop-filter: blur(2px);
+  background: rgba(17, 24, 39, 0.5);
+  backdrop-filter: blur(3px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -136,34 +132,31 @@ body {
 }
 
 @keyframes modal-in {
-  from {
-    opacity: 0;
-    transform: translateY(12px) scale(0.98);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Logo + name as a single horizontal brand lockup, centered together. */
+.modal-brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin: 0 0 8px;
 }
 
 .modal-title {
-  margin: 0 0 4px;
+  margin: 0;
   font-size: 26px;
   font-weight: 800;
   letter-spacing: -0.02em;
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 8px;
 }
 
-/* Clip the gradient to the TEXT only — applying it to the whole heading also
-   made the 🃏 emoji transparent (invisible). */
 .modal-title-text {
-  background: var(--gradient-brand);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: var(--color-primary);
 }
 
 .modal-subtitle {
@@ -205,13 +198,6 @@ body {
   box-shadow: 0 0 0 3px var(--color-primary-light);
 }
 
-.text-input-inline {
-  width: auto;
-  flex: 1;
-  padding: 6px 10px;
-  font-size: 14px;
-}
-
 .checkbox-row {
   display: flex;
   align-items: center;
@@ -242,35 +228,29 @@ body {
   border-radius: var(--radius-sm);
   padding: 10px 18px;
   cursor: pointer;
-  transition: transform 0.1s ease, box-shadow 0.15s ease, background 0.15s ease;
+  transition: transform 0.1s ease, box-shadow 0.15s ease, background 0.15s ease,
+    border-color 0.15s ease, color 0.15s ease;
 }
 
-.btn:active {
-  transform: translateY(1px);
-}
+.btn:active { transform: translateY(1px); }
 
-.btn-block {
-  width: 100%;
-}
+.btn-block { width: 100%; }
 
 .btn-primary {
-  background: var(--gradient-brand);
-  background-size: 140% 140%;
-  background-position: 0% 50%;
+  background: var(--color-primary);
   color: #fff;
   box-shadow: var(--shadow-glow);
-  transition: transform 0.1s ease, box-shadow 0.2s ease, background-position 0.4s ease;
 }
 
-.btn-primary:hover {
-  background-position: 100% 50%;
-  box-shadow: 0 10px 28px rgba(99, 102, 241, 0.38);
+.btn-primary:hover:not(:disabled) {
+  background: var(--color-primary-dark);
+  box-shadow: 0 10px 26px rgba(124, 58, 237, 0.4);
   transform: translateY(-1px);
 }
 
 .btn-primary:disabled {
-  filter: grayscale(0.4) opacity(0.7);
-  box-shadow: var(--shadow-sm);
+  filter: grayscale(0.3) opacity(0.75);
+  box-shadow: none;
   cursor: default;
   transform: none;
 }
@@ -286,48 +266,43 @@ body {
   border-color: var(--color-accent);
 }
 
+/* Quiet ghost button (top-bar "Copy link"). */
+.btn-ghost {
+  background: transparent;
+  color: var(--color-primary-dark);
+  border: 1.5px solid var(--color-border);
+  padding: 8px 14px;
+}
+
+.btn-ghost:hover {
+  background: var(--color-primary-light);
+  border-color: var(--color-accent);
+}
+
 /* ------------------------------------------------------------------------
    App shell
    ------------------------------------------------------------------------ */
 
 .app {
-  max-width: 1200px;
+  max-width: 1240px;
   margin: 0 auto;
-  padding: 20px 16px 40px;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.app-header {
-  position: relative;
-  overflow: hidden;
-  background: var(--gradient-brand);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md), inset 0 1px 0 rgba(255, 255, 255, 0.25);
-  padding: 22px 24px;
+  padding: 16px 18px 40px;
   display: flex;
   flex-direction: column;
   gap: 16px;
-  color: #fff;
 }
 
-/* Subtle sheen sweeping across the header. */
-.app-header::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(420px 160px at 85% -40%, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0) 70%);
-  pointer-events: none;
-}
-
-/* Top strip of the header: brand on the left, welcome/name on the right. */
-.header-top {
+/* ---- Slim top bar ------------------------------------------------------ */
+.topbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  gap: 16px;
   flex-wrap: wrap;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: 12px 16px;
 }
 
 .brand {
@@ -335,144 +310,81 @@ body {
   align-items: center;
   gap: 10px;
   font-weight: 800;
-  font-size: 20px;
+  font-size: 18px;
   letter-spacing: -0.01em;
+  color: var(--color-text);
 }
 
-.brand-emoji {
-  font-size: 26px;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
-}
-
-/* ------------------------------------------------------------------------
-   Logo mark — a rounded card badge with a spade, used in the header brand,
-   the join modal, and (as a data-URI) the favicon. Replaces the flat emoji.
-   ------------------------------------------------------------------------ */
 .logo-mark {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
+  width: 32px;
+  height: 32px;
   flex-shrink: 0;
 }
 
-.logo-mark svg {
-  width: 100%;
-  height: 100%;
-  display: block;
-}
+.logo-mark svg { width: 100%; height: 100%; display: block; }
 
-/* On the blue header: a white card badge so it reads against the gradient. */
-.logo-mark--onbrand {
-  filter: drop-shadow(0 3px 6px rgba(15, 23, 42, 0.22));
-}
+.logo-mark--onbrand { filter: drop-shadow(0 2px 4px rgba(17, 24, 39, 0.14)); }
 
-/* Larger, filled brand-gradient badge for the join modal. */
-.logo-mark--lg {
-  width: 56px;
-  height: 56px;
-}
+.logo-mark--lg { width: 56px; height: 56px; }
 
 .logo-mark--brand {
-  margin: 0 auto 12px;
-  border-radius: 16px;
-  background: var(--gradient-brand);
+  border-radius: 14px;
+  background: var(--color-primary);
   box-shadow: var(--shadow-glow);
-  padding: 12px;
+  padding: 10px;
 }
 
-/* "Welcome, <name>" pinned to the top-right — rendered as a soft glass pill. */
+/* Invite box grows to fill the middle of the bar. */
+.topbar-invite {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 220px;
+}
+
+.invite-input {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 12px;
+  font-size: 13px;
+  letter-spacing: 0.01em;
+  background: var(--color-bg);
+  color: var(--color-text-muted);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+}
+
+.invite-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
 .user-welcome {
   display: flex;
   align-items: center;
   gap: 8px;
   font-size: 14px;
-  margin-left: auto;
-  padding: 6px 14px;
+  padding: 6px 12px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.14);
-  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: var(--color-primary-light);
+  border: 1px solid var(--color-border);
 }
 
-.user-label {
-  color: rgba(255, 255, 255, 0.85);
-  white-space: nowrap;
-}
+.user-label { color: var(--color-text-muted); white-space: nowrap; }
 
-/* Static name label (no longer an editable input). */
 .user-name-label {
   font-weight: 800;
-  color: #fff;
-  max-width: 220px;
+  color: var(--color-primary-dark);
+  max-width: 200px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-/* Full-width invite/copy URL box — roomy so long links are readable. */
-.invite-input {
-  width: 100%;
-  padding: 12px 16px;
-  font-size: 14px;
-  letter-spacing: 0.01em;
-  background: rgba(255, 255, 255, 0.16);
-  color: #fff;
-  border: 1.5px solid rgba(255, 255, 255, 0.28);
-}
-
-.invite-input::placeholder {
-  color: rgba(255, 255, 255, 0.7);
-}
-
-.invite-input:focus {
-  border-color: rgba(255, 255, 255, 0.75);
-  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.18);
-}
-
-/* Action button row directly under the invite box:
-   Copy invite link · Reveal cards · New round. */
-.header-actions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.header-actions .btn {
-  padding: 8px 16px;
-  font-size: 14px;
-}
-
-/* Copy + New round read as light/translucent chips on the gradient header. */
-.app-header .btn-secondary {
-  background: rgba(255, 255, 255, 0.16);
-  color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.4);
-}
-
-.app-header .btn-secondary:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.28);
-}
-
-/* Reveal (primary) stands out as a solid white chip against the gradient. */
-.app-header .header-actions .btn-primary {
-  background: #fff;
-  color: var(--color-primary-dark);
-  border: 1px solid transparent;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
-}
-
-.app-header .header-actions .btn-primary:hover:not(:disabled) {
-  background: #fff;
-  transform: translateY(-1px);
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.24);
-}
-
-.app-header .header-actions .btn-primary:disabled {
-  background: rgba(255, 255, 255, 0.45);
-  color: rgba(255, 255, 255, 0.85);
-  box-shadow: none;
-  filter: none;
 }
 
 .tag {
@@ -483,67 +395,293 @@ body {
   font-weight: 600;
 }
 
-.tag-spectator {
-  background: #f3f4f6;
-  color: var(--color-spectator);
+.tag-spectator { background: #eef0f4; color: var(--color-spectator); }
+
+.host-hint {
+  margin: -4px 4px 0;
+  color: var(--color-text-muted);
+  font-size: 13px;
 }
 
 /* ------------------------------------------------------------------------
-   Main content
+   Stage: table (main) + history rail
    ------------------------------------------------------------------------ */
 
-.content-row {
+.stage {
   display: flex;
   align-items: flex-start;
-  gap: 20px;
+  gap: 16px;
 }
 
-.main-content {
+.stage-main {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
   flex: 1;
   min-width: 0;
 }
 
-.topic-section,
-.table-section,
-.stats-section,
-.deck-section {
-  background: var(--glass-bg);
-  backdrop-filter: blur(14px) saturate(1.4);
-  -webkit-backdrop-filter: blur(14px) saturate(1.4);
-  border: 1px solid var(--glass-border);
+/* ---- Left live chat panel --------------------------------------------- */
+.chat-panel {
+  width: 260px;
+  flex-shrink: 0;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
-  padding: 22px;
+  padding: 16px;
+  position: sticky;
+  top: 16px;
+  /* Leave room for the sticky bottom dock so it never floats over the chat. */
+  height: calc(100vh - 32px - var(--dock-clear));
+  display: flex;
+  flex-direction: column;
 }
 
-.topic-input {
-  font-size: 16px;
-  font-weight: 600;
+.roster-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  flex-shrink: 0;
 }
+
+.roster-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--color-primary-dark);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Voting-progress chip kept in the chat header. */
+.roster-count {
+  min-width: 24px;
+  height: 24px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--color-primary-light);
+  color: var(--color-primary-dark);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.chat-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.chat-empty {
+  margin: auto 0;
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+.chat-msg {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.chat-msg-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.chat-msg-head .player-avatar {
+  width: 24px;
+  height: 24px;
+  font-size: 10px;
+  border-width: 2px;
+  box-shadow: var(--shadow-sm);
+  outline: none;
+}
+
+.chat-msg-head:hover .player-avatar { transform: none; }
+
+.chat-msg-who {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+}
+
+/* The message bubble, indented to align under the name. */
+.chat-msg-text {
+  margin-left: 31px;
+  padding: 7px 11px;
+  border-radius: 4px 14px 14px 14px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--color-text);
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+}
+
+/* Your own messages: violet bubble, right-aligned. */
+.chat-msg.is-self { align-items: flex-end; }
+.chat-msg.is-self .chat-msg-head { flex-direction: row-reverse; }
+.chat-msg.is-self .chat-msg-text {
+  margin-left: 0;
+  margin-right: 31px;
+  border-radius: 14px 4px 14px 14px;
+  background: var(--color-primary);
+  border-color: transparent;
+  color: #fff;
+}
+
+.chat-form {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+}
+
+.chat-input {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 12px;
+  border-radius: 999px;
+  border: 1.5px solid var(--color-border);
+  background: var(--color-bg);
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--color-text);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.chat-input:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+  background: var(--color-surface);
+}
+
+.chat-send-btn {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: none;
+  background: var(--color-primary);
+  color: #fff;
+  font-size: 15px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease, transform 0.12s ease;
+}
+
+.chat-send-btn:hover { background: var(--color-primary-dark); transform: scale(1.06); }
+.chat-send-btn:active { transform: scale(0.94); }
+
+.topic-section {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: 16px 18px;
+}
+
+.topic-input { font-size: 16px; font-weight: 600; }
+
+/* ---- The poker table --------------------------------------------------- */
+.table-section {
+  background: transparent;
+}
+
+.poker-table {
+  position: relative;
+  background: var(--felt);
+  border-radius: 140px / 92px;
+  border: 10px solid var(--felt-rail);
+  box-shadow: var(--shadow-lg), inset 0 1px 4px rgba(17, 24, 39, 0.06),
+    inset 0 0 0 2px var(--felt-line);
+  padding: 40px 36px;
+  min-height: 360px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 26px;
+}
+
+/* Faint painted ring on the felt, like a real card table. */
+.poker-table::before {
+  content: "";
+  position: absolute;
+  inset: 22px;
+  border-radius: 120px / 76px;
+  border: 2px dashed var(--felt-line);
+  pointer-events: none;
+}
+
+/* Players seated around the felt. */
+.players-grid {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  width: 100%;
+}
+
+/* Center of the table: action buttons, then the revealed stats. */
+.table-center {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+}
+
+.table-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+/* On the white table, buttons use the standard light-surface styling
+   (see .btn-primary / .btn-secondary above) — no felt overrides needed. */
 
 /* ------------------------------------------------------------------------
-   Player cards
+   Player seats
    ------------------------------------------------------------------------ */
-
-.players-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-  gap: 14px;
-}
 
 .player-card {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
-  padding: 16px 8px;
+  gap: 7px;
+  padding: 10px 8px;
   border-radius: var(--radius-md);
-  background: linear-gradient(160deg, #ffffff 0%, #f6f7fd 100%);
+  background: linear-gradient(160deg, #ffffff 0%, #f6f7fb 100%);
   border: 1.5px solid var(--color-border);
-  transition: box-shadow 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+  box-shadow: var(--shadow-sm);
+  width: 88px;
+  min-width: 0;
+  transition: box-shadow 0.18s ease, border-color 0.18s ease, transform 0.18s ease,
+    background 0.18s ease;
 }
 
 .player-card:hover {
@@ -556,41 +694,42 @@ body {
   box-shadow: 0 0 0 3px var(--color-primary-light);
 }
 
-/* Initials avatar — a coloured disc unique to each player's name. */
 .player-avatar {
-  width: 40px;
-  height: 40px;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   color: #fff;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 800;
   letter-spacing: 0.02em;
   text-transform: uppercase;
-  box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255, 255, 255, 0.25);
-  border: 2px solid var(--color-surface);
+  box-shadow: 0 4px 12px rgba(17, 24, 39, 0.16), inset 0 2px 2px rgba(255, 255, 255, 0.35),
+    inset 0 -3px 6px rgba(0, 0, 0, 0.12);
+  border: 2.5px solid var(--color-surface);
+  outline: 2px solid rgba(17, 24, 39, 0.06);
   user-select: none;
+  transition: transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1.3);
 }
 
-.player-card.is-spectator .player-avatar {
-  filter: grayscale(0.5) opacity(0.85);
-}
+.player-card:hover .player-avatar { transform: scale(1.08) rotate(-3deg); }
+
+.player-card.is-spectator .player-avatar { filter: grayscale(0.5) opacity(0.85); }
 
 .player-name {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   text-align: center;
-  max-width: 110px;
+  color: var(--color-text);
+  max-width: 78px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.player-card.is-spectator .player-name {
-  color: var(--color-spectator);
-}
+.player-card.is-spectator .player-name { color: var(--color-spectator); }
 
 .host-badge {
   display: inline-block;
@@ -604,9 +743,6 @@ body {
   color: var(--color-primary-dark);
 }
 
-/* "Make host" — shown on other players' cards when the viewer is the host.
-   Kept quiet by default and brought forward on hover/focus so a large grid
-   doesn't fill with buttons. */
 .make-host-btn {
   padding: 3px 10px;
   border-radius: 999px;
@@ -619,92 +755,91 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.04em;
   cursor: pointer;
-  opacity: 0.45;
+  opacity: 0.5;
   transition: opacity 0.15s ease, background 0.15s ease, border-color 0.15s ease,
     color 0.15s ease;
 }
 
 .player-card:hover .make-host-btn,
-.make-host-btn:focus-visible {
-  opacity: 1;
-}
+.make-host-btn:focus-visible { opacity: 1; }
 
 .make-host-btn:hover {
-  background: var(--gradient-brand);
+  background: var(--color-primary);
   color: #fff;
   border-color: transparent;
 }
 
-.player-card-face {
-  width: 56px;
-  height: 78px;
-  border-radius: 8px;
-  display: flex;
+/* Compact vote indicator — a small pill under the avatar, replacing the old
+   full-size card face so many seats fit without overflowing into the deck. */
+.vote-chip {
+  min-width: 30px;
+  height: 24px;
+  padding: 0 9px;
+  border-radius: 999px;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
-  font-weight: 700;
-  background: var(--color-surface);
-  border: 1.5px solid var(--color-border);
-  perspective: 600px;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1;
 }
 
-.vote-card {
-  width: 56px;
-  height: 78px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 20px;
-  font-weight: 700;
-}
-
-.vote-card.state-empty {
-  background: repeating-linear-gradient(
-    45deg,
-    var(--color-bg),
-    var(--color-bg) 6px,
-    #eceef7 6px,
-    #eceef7 12px
-  );
+/* Still deciding — a faint empty pill. */
+.vote-chip.is-idle {
+  background: var(--color-bg);
   border: 1.5px dashed var(--color-border);
-  color: var(--color-text-muted);
-  font-size: 12px;
+  min-width: 24px;
 }
 
-.vote-card.state-hidden {
-  background: var(--gradient-brand);
-  color: #fff;
-  box-shadow: var(--shadow-sm);
+/* Voted but hidden — a green check pill. */
+.vote-chip.is-check {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+  animation: chip-pop 0.22s ease both;
 }
 
-.vote-card.state-revealed {
-  background: var(--color-surface);
-  border: 2px solid var(--color-primary);
+/* Revealed — the value in a violet pill. */
+.vote-chip.is-value {
+  background: var(--color-primary-light);
   color: var(--color-primary-dark);
-  box-shadow: var(--shadow-sm);
+  border: 1.5px solid var(--color-primary);
+  animation: chip-pop 0.26s ease both;
 }
 
-.spectator-eye {
-  font-size: 22px;
-  opacity: 0.6;
+/* Spectator — an eye, no pill chrome. */
+.vote-chip.is-eye {
+  background: transparent;
+  font-size: 18px;
+  opacity: 0.7;
+}
+
+/* A subtle green ring on the whole seat once the player has voted. */
+.player-card.is-voted { border-color: var(--color-success); }
+
+@keyframes chip-pop {
+  from { transform: scale(0.6); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
 }
 
 /* ------------------------------------------------------------------------
-   Stats
+   Stats (center of the table, shown on reveal)
    ------------------------------------------------------------------------ */
 
 .stats-section {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
+  background: var(--color-primary-light);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: 16px 26px;
 }
 
 .stats-grid {
   display: flex;
-  gap: 24px;
+  gap: 28px;
   flex-wrap: wrap;
   justify-content: center;
 }
@@ -713,25 +848,19 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  min-width: 80px;
+  min-width: 72px;
 }
 
 .stat-value {
-  font-size: 28px;
-  font-weight: 700;
+  font-size: 30px;
+  font-weight: 800;
   color: var(--color-primary-dark);
   animation: stat-pop 0.4s cubic-bezier(0.2, 0.8, 0.2, 1.4) both;
 }
 
 @keyframes stat-pop {
-  from {
-    opacity: 0;
-    transform: scale(0.6);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
+  from { opacity: 0; transform: scale(0.6); }
+  to   { opacity: 1; transform: scale(1); }
 }
 
 .stat-label {
@@ -752,117 +881,112 @@ body {
 }
 
 @keyframes badge-bounce {
-  0% {
-    opacity: 0;
-    transform: scale(0.4) translateY(6px);
-  }
-  55% {
-    transform: scale(1.12) translateY(0);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
+  0%   { opacity: 0; transform: scale(0.4) translateY(6px); }
+  55%  { transform: scale(1.12) translateY(0); }
+  100% { opacity: 1; transform: scale(1); }
 }
 
 /* ------------------------------------------------------------------------
-   Controls
+   Card deck — docked along the bottom as a horizontal strip
    ------------------------------------------------------------------------ */
 
-.controls-section {
-  display: flex;
-  gap: 10px;
-  justify-content: center;
-  flex-wrap: wrap;
-}
-
-.host-hint {
-  width: 100%;
-  margin: 2px 0 0;
-  text-align: left;
-  color: rgba(255, 255, 255, 0.85);
-  font-size: 13px;
-}
-
-/* ------------------------------------------------------------------------
-   Deck
-   ------------------------------------------------------------------------ */
-
-.deck-section {
-  display: flex;
-  justify-content: center;
-}
-
-/* Deck as a sticky left-hand panel (mirrors the history panel on the right). */
-.deck-panel {
-  width: 200px;
-  flex-shrink: 0;
-  flex-direction: column;
-  justify-content: flex-start;
+.deck-dock {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  padding: 8px 12px 10px;
   position: sticky;
-  top: 20px;
-  animation: deck-panel-in 0.35s ease-out both;
+  bottom: 12px;
+  /* Sit above the seats: .players-grid / .table-center are position:relative
+     z-index:1, so without a higher z-index here the player cards paint over
+     this pinned deck as you scroll. The opaque background then cleanly hides
+     whatever scrolls behind it. */
+  z-index: 50;
+  /* Stacked: a top row (React · Controls) above the card-picking row. */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
 }
 
-@keyframes deck-panel-in {
-  from {
-    opacity: 0;
-    transform: translateX(-16px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
+/* Top row: React + Controls side by side, centered. */
+.dock-row {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: stretch;
+  justify-content: center;
+  gap: 16px;
 }
 
-.deck-title {
-  margin: 0;
-  font-size: 15px;
-  font-weight: 800;
-  letter-spacing: -0.01em;
+/* A group inside the dock: its header + its row of controls. */
+.dock-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+}
+
+/* The card-picking group spans the dock's full width so the deck can breathe. */
+.dock-group-cards { width: 100%; }
+
+/* The controls row: action buttons side by side to keep the dock compact. */
+#controls-group .table-actions {
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+#controls-group .table-actions .btn { width: auto; }
+
+/* Thin vertical rule separating the groups. */
+.dock-divider {
+  width: 1px;
+  align-self: stretch;
+  background: var(--color-border);
+}
+
+/* Horizontal rule separating the top row from the cards row below it. */
+.dock-divider-h {
+  width: 100%;
+  height: 1px;
+  align-self: auto;
+}
+
+.deck-dock-head {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
-}
-
-/* Clip the gradient to the TEXT only — applying it to the whole heading also
-   made the 🃏 emoji transparent (invisible). */
-.deck-title-text {
-  background: var(--gradient-brand);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.deck-subtitle {
-  margin: 2px 0 16px;
-  font-size: 12px;
+  font-size: 11px;
+  font-weight: 700;
   color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
+
+.deck-title-text { color: var(--color-primary-dark); }
 
 .deck {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  justify-items: stretch;
-}
-
-/* Inside the narrow left panel, let cards fill their grid cell (a fixed 56px
-   width would overflow a ~46px column) while keeping the playing-card shape. */
-.deck-panel .deck-card {
-  width: 100%;
-  height: auto;
-  aspect-ratio: 56 / 78;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  align-items: flex-end;
 }
 
 .deck-card {
-  width: 56px;
-  height: 78px;
+  position: relative;
+  width: 46px;
+  height: 62px;
   border-radius: 10px;
   border: 1.5px solid var(--color-border);
-  background: linear-gradient(160deg, #ffffff 0%, #f7f8ff 100%);
+  background: linear-gradient(160deg, #ffffff 0%, #f5f6ff 100%);
   font-size: 18px;
-  font-weight: 700;
+  font-weight: 800;
   color: var(--color-text);
   cursor: pointer;
   display: flex;
@@ -876,28 +1000,22 @@ body {
 }
 
 @keyframes deal-in {
-  from {
-    opacity: 0;
-    transform: translateY(14px) rotate(-4deg) scale(0.9);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) rotate(0) scale(1);
-  }
+  from { opacity: 0; transform: translateY(14px) rotate(-4deg) scale(0.9); }
+  to   { opacity: 1; transform: translateY(0) rotate(0) scale(1); }
 }
 
 .deck-card:hover {
-  transform: translateY(-8px) scale(1.05);
+  transform: translateY(-10px) scale(1.05);
   box-shadow: var(--shadow-lg);
   border-color: var(--color-accent);
   color: var(--color-primary-dark);
 }
 
 .deck-card.selected {
-  background: var(--gradient-brand);
+  background: var(--color-primary);
   color: #fff;
   border-color: transparent;
-  transform: translateY(-10px) scale(1.06);
+  transform: translateY(-12px) scale(1.06);
   box-shadow: var(--shadow-glow);
 }
 
@@ -910,33 +1028,11 @@ body {
   pointer-events: none;
 }
 
-.deck-card {
-  position: relative;
-}
-
-.deck-hint {
-  text-align: center;
-  color: var(--color-text-muted);
-  font-size: 14px;
-}
-
-/* Custom card entry — sits in the deck grid right after the ☕ card and spans
-   the two remaining columns of the last row, so its right edge lines up under
-   the ? card above it. Same height as a deck card. Type a value + Enter. */
+/* Custom value entry — same card footprint, dashed until focused/selected. */
 .deck-custom {
   display: flex;
-  grid-column: span 2;
-  height: 78px;
-}
-
-/* Don't give the custom tile its own aspect-ratio: because it spans 2 columns
-   (plus the grid gap), an aspect-ratio would compute a DIFFERENT height than
-   the single-column ☕ card in the same row, so their bottoms wouldn't align.
-   Instead let it stretch to the row height that the ☕ card defines. */
-.deck-panel .deck-custom {
-  height: auto;
-  aspect-ratio: auto;
-  align-self: stretch;
+  width: 72px;
+  height: 62px;
 }
 
 .deck-custom-input {
@@ -945,10 +1041,10 @@ body {
   padding: 4px;
   border-radius: 10px;
   border: 1.5px dashed var(--color-border);
-  background: linear-gradient(160deg, #ffffff 0%, #f7f8ff 100%);
+  background: linear-gradient(160deg, #ffffff 0%, #f5f6ff 100%);
   box-shadow: var(--shadow-sm);
   font-family: inherit;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
   text-align: center;
   color: var(--color-text);
@@ -963,71 +1059,35 @@ body {
   box-shadow: 0 0 0 3px var(--color-primary-light);
 }
 
-.deck-custom-input::placeholder {
-  color: var(--color-text-muted);
-  font-weight: 600;
-}
+.deck-custom-input::placeholder { color: var(--color-text-muted); font-weight: 600; }
 
-/* When the active vote is a custom value, light the tile up like a selected card. */
 .deck-custom.selected .deck-custom-input {
   border-style: solid;
   border-color: transparent;
-  background: var(--gradient-brand);
+  background: var(--color-primary);
   color: #fff;
   box-shadow: var(--shadow-glow);
 }
 
-.deck-custom.selected .deck-custom-input::placeholder {
-  color: #fff;
-  opacity: 0.95;
-}
+.deck-custom.selected .deck-custom-input::placeholder { color: #fff; opacity: 0.95; }
 
 /* ------------------------------------------------------------------------
-   Round history (side panel)
+   Voting history (side rail)
    ------------------------------------------------------------------------ */
 
 .history-panel {
-  width: 280px;
+  width: 300px;
   flex-shrink: 0;
-  background: var(--glass-bg);
-  backdrop-filter: blur(14px) saturate(1.4);
-  -webkit-backdrop-filter: blur(14px) saturate(1.4);
-  border: 1px solid var(--glass-border);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
-  padding: 20px;
+  padding: 18px;
   position: sticky;
-  top: 20px;
-  max-height: calc(100vh - 40px);
+  top: 16px;
+  max-height: calc(100vh - 32px - var(--dock-clear));
   display: flex;
   flex-direction: column;
-  animation: panel-in 0.35s ease-out both;
-}
-
-/* Clip the gradient to the TEXT only — applying it to the whole heading also
-   made the 📜 emoji transparent (invisible), same as the deck/modal titles. */
-.history-title {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.history-title-text {
-  background: var(--gradient-brand);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-@keyframes panel-in {
-  from {
-    opacity: 0;
-    transform: translateX(16px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
 }
 
 .history-header {
@@ -1037,7 +1097,17 @@ body {
   margin-bottom: 12px;
 }
 
-/* Count + host-only "Clear" button sit together on the right of the header. */
+.history-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.history-title-text { color: var(--color-primary-dark); }
+
 .history-header-right {
   display: flex;
   align-items: center;
@@ -1062,12 +1132,6 @@ body {
   color: #fff;
   background: var(--color-danger);
   border-color: var(--color-danger);
-}
-
-.history-title {
-  margin: 0;
-  font-size: 15px;
-  font-weight: 700;
 }
 
 .history-count {
@@ -1120,19 +1184,9 @@ body {
 }
 
 @keyframes history-pop {
-  0% {
-    opacity: 0;
-    transform: translateY(-10px) scale(0.96);
-    box-shadow: 0 0 0 3px var(--color-primary-light);
-  }
-  60% {
-    box-shadow: 0 0 0 4px var(--color-primary-light);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-    box-shadow: none;
-  }
+  0%   { opacity: 0; transform: translateY(-10px) scale(0.96); box-shadow: 0 0 0 3px var(--color-primary-light); }
+  60%  { box-shadow: 0 0 0 4px var(--color-primary-light); }
+  100% { opacity: 1; transform: translateY(0) scale(1); box-shadow: none; }
 }
 
 .history-item-head {
@@ -1142,21 +1196,11 @@ body {
   gap: 8px;
 }
 
-.history-round {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--color-text-muted);
-}
+.history-round { font-size: 12px; font-weight: 700; color: var(--color-text-muted); }
 
-.history-avg {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--color-primary-dark);
-}
+.history-avg { font-size: 13px; font-weight: 700; color: var(--color-primary-dark); }
 
-.history-avg.is-agreement {
-  color: #15803d;
-}
+.history-avg.is-agreement { color: #15803d; }
 
 .history-topic {
   margin-top: 4px;
@@ -1168,18 +1212,9 @@ body {
   white-space: nowrap;
 }
 
-.history-meta {
-  margin-top: 2px;
-  font-size: 11px;
-  color: var(--color-text-muted);
-}
+.history-meta { margin-top: 2px; font-size: 11px; color: var(--color-text-muted); }
 
-.history-chips {
-  margin-top: 8px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
+.history-chips { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 4px; }
 
 .history-chip {
   font-size: 11px;
@@ -1199,36 +1234,48 @@ body {
    ------------------------------------------------------------------------ */
 
 .app-footer {
-  text-align: center;
-  color: var(--color-text-muted);
-  font-size: 13px;
-  padding: 28px 0 20px;
-  margin-top: 12px;
-  border-top: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  padding: 20px 0 8px;
+  margin-top: 4px;
 }
+
+/* First line: logo + brand name (+ version pill). */
+.footer-brand-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+/* Second line: tagline · credit. */
+.footer-meta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.footer-logo { width: 22px; height: 22px; }
 
 .footer-brand {
-  font-size: 15px;
   font-weight: 800;
   letter-spacing: -0.01em;
-  background: var(--gradient-brand);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: var(--color-primary-dark);
+  font-size: 15px;
 }
 
-.app-credit {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--color-primary-dark);
-}
+.footer-dot { color: var(--color-border); }
+
+.app-credit { font-weight: 600; color: var(--color-text); }
 
 .app-version {
-  margin-top: 6px;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.06em;
@@ -1239,30 +1286,19 @@ body {
   background: var(--color-surface);
 }
 
-.poker-logo {
-  margin-bottom: 4px;
-  display: flex;
-  justify-content: center;
-}
-
-.poker-logo svg {
-  width: 72px;
-  height: auto;
-  filter: drop-shadow(0 6px 14px rgba(15, 23, 42, 0.16));
-  transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1.2);
-}
-
-.poker-logo svg:hover {
-  transform: translateY(-4px) scale(1.04);
-}
-
 /* ------------------------------------------------------------------------
    Responsive
    ------------------------------------------------------------------------ */
 
-@media (max-width: 820px) {
-  .content-row {
-    flex-direction: column;
+@media (max-width: 900px) {
+  .stage { flex-direction: column; }
+
+  /* Both rails go full-width and stop being sticky/full-height once stacked. */
+  .chat-panel {
+    width: 100%;
+    position: static;
+    height: auto;
+    max-height: 60vh;
   }
 
   .history-panel {
@@ -1271,61 +1307,134 @@ body {
     max-height: none;
   }
 
-  /* Deck returns to a full-width horizontal strip when stacked. */
-  .deck-panel {
-    width: 100%;
-    position: static;
-  }
-
-  .deck-panel .deck {
-    grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));
-  }
-
-  .deck-panel .deck-card {
-    width: 56px;
-    height: 78px;
-    aspect-ratio: auto;
-    justify-self: center;
-  }
+  /* Stack the top row too, and make its divider horizontal. */
+  .dock-row { flex-direction: column; align-items: center; }
+  .dock-row .dock-divider { width: 100%; height: 1px; align-self: auto; }
 }
 
 @media (max-width: 560px) {
-  .app {
-    padding: 12px 10px 30px;
+  .app { padding: 12px 10px 30px; }
+
+  .topbar { gap: 10px; }
+
+  .topbar-invite { order: 3; width: 100%; }
+
+  .poker-table {
+    padding: 26px 16px;
+    border-radius: 40px;
+    border-width: 8px;
   }
 
-  .players-grid {
-    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
-    gap: 10px;
-  }
+  .poker-table::before { border-radius: 34px; }
 
-  .player-card-face,
-  .vote-card,
+  .players-grid { gap: 8px; }
+
+  .player-card { width: 78px; }
+
   .deck-card {
-    width: 48px;
-    height: 66px;
-    font-size: 16px;
+    width: 46px;
+    height: 62px;
+    font-size: 15px;
   }
 
-  .header-top {
-    flex-direction: column;
-    align-items: flex-start;
+  .deck-custom {
+    width: 70px;
+    height: 62px;
+    font-size: 15px;
   }
+}
 
-  .user-welcome {
-    margin-left: 0;
-    width: 100%;
-  }
+/* ========================================================================
+   Emoji reactions — a dock everyone can tap + a layer they float up through
+   ======================================================================== */
 
-  .user-welcome .text-input-inline {
-    flex: 1;
-  }
+/* Now a plain row inside the shared dock box (no standalone pill chrome). */
+.reaction-bar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  max-width: 100%;
+}
 
-  .header-actions .btn {
-    flex: 1;
-  }
+.reaction-btn {
+  border: 1px solid transparent;
+  background: var(--color-bg);
+  border-radius: 999px;
+  width: 34px;
+  height: 34px;
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.12s ease, background 0.12s ease, border-color 0.12s ease;
+}
 
-  .host-hint {
-    text-align: left;
+.reaction-btn:hover {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+  transform: translateY(-2px) scale(1.12);
+}
+
+.reaction-btn:active { transform: scale(0.94); }
+
+/* Full-viewport, click-through layer the emojis rise through. */
+.reaction-layer {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 1500;
+}
+
+.reaction-float {
+  position: absolute;
+  bottom: 84px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  will-change: transform, opacity;
+  animation: reaction-rise 2.4s ease-out forwards;
+}
+
+.reaction-float-glyph {
+  font-size: 34px;
+  line-height: 1;
+  filter: drop-shadow(0 2px 4px rgba(17, 24, 39, 0.25));
+}
+
+.reaction-float-who {
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  background: rgba(17, 24, 39, 0.62);
+  padding: 1px 7px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+@keyframes reaction-rise {
+  0% {
+    opacity: 0;
+    transform: translate(0, 20px) scale(0.6);
   }
+  12% {
+    opacity: 1;
+    transform: translate(calc(var(--drift) * 0.2), 0) scale(1);
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--drift), -62vh) scale(1.05);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reaction-float { animation-duration: 1.6s; }
+  .reaction-btn:hover { transform: none; }
 }
