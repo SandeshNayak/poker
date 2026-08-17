@@ -448,6 +448,12 @@
   // Deck (voting cards)
   // ------------------------------------------------------------------
   function castVote(value) {
+    // Guard against double-click / rapid-fire votes within the same poll cycle.
+    if (window.__ppLastVoteTs) {
+      var now = Date.now();
+      if (now - window.__ppLastVoteTs < 1000) return; // ignore within 1s
+    }
+    window.__ppLastVoteTs = Date.now();
     storeSelectedVote(value);
     apiAction("vote", { value: value });
     highlightSelectedDeckCard();
