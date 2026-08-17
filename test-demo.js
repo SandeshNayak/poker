@@ -77,7 +77,10 @@ const playerById = (st, id) => st.players.find((p) => p.id === id);
 (async () => {
   // Unique per-run room so assertions can't be contaminated by a browser tab
   // sitting on the shared demo room (its poll would re-join and skew counts).
-  const ROOM = 'test-' + PORT + '-' + Date.now();
+  // Room to run the dry test in. Override with ROOM=<id> to test a specific
+  // room; otherwise a unique throwaway room is used (so a browser tab sitting
+  // on the shared demo room can't skew counts).
+  const ROOM = process.env.ROOM || 'test-' + PORT + '-' + Date.now();
   const REACTIONS = ['👍', '👎', '🎉', '😂', '🤔', '❤️', '🔥', '👏', '😮', '🚀'];
 
   // Agent count is configurable: `AGENTS=15 node test-demo.js` (default 10).
@@ -305,9 +308,11 @@ const playerById = (st, id) => st.players.find((p) => p.id === id);
   console.log('\n[demo] Tearing down test room, seeding a fresh demo room…');
   await Promise.all(agents.map((a) => action({ type: 'leave', roomId: ROOM, playerId: a.id })));
 
-  // The viewable room uses a stable id so the link is easy to open. It's OK if a
-  // browser tab is already here — we just (re)seed the agents around it.
-  const DEMO = 'demo-' + PORT;
+  // The viewable room at the end re-uses a stable id so the link is easy to
+  // open. When testing a specific room (ROOM override), we re-seed THAT same
+  // room so it stays populated for viewing. It's OK if a browser tab is already
+  // here — we just (re)seed the agents around it.
+  const DEMO = process.env.ROOM || 'demo-' + PORT;
   const demoAgents = Array.from({ length: N }, (_, i) => ({
     id: 'agent-' + i,
     name: 'Agent ' + i,

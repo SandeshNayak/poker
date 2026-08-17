@@ -99,6 +99,32 @@
   var playerId = getOrCreatePlayerId(roomId);
   var selfId = playerId;
   var selectedVote = null;
+  var SET_SELECTED_KEY = "planningPoker.vote." + roomId;
+  // Restore the last card this tab picked, so a REFRESH mid-round keeps the
+  // deck highlighted (the server keeps the vote itself, but hides its value
+  // until reveal — see render's sync below). sessionStorage is per-tab, so each
+  // browser tab keeps its own selection.
+  try {
+    selectedVote = window.sessionStorage.getItem(SET_SELECTED_KEY) || null;
+  } catch (e) {
+    /* ignore */
+  }
+
+  // Single place that owns selectedVote so the persisted copy always matches the
+  // live value (cast, reset/new-round and the render sync all go through this).
+  function storeSelectedVote(value) {
+    selectedVote = value;
+    try {
+      if (value === null || value === undefined || value === "") {
+        window.sessionStorage.removeItem(SET_SELECTED_KEY);
+      } else {
+        window.sessionStorage.setItem(SET_SELECTED_KEY, value);
+      }
+    } catch (e) {
+      /* ignore */
+    }
+  }
+
   var latestState = null;
   var pollTimer = null;
 
@@ -152,10 +178,10 @@
   var newRoundBtn = document.getElementById("new-round-btn");
   var hostHint = document.getElementById("host-hint");
 
-  var deckSection = document.getElementById("deck-section");
   var deckGroup = document.getElementById("deck-group");
   var dockDivider = document.getElementById("dock-divider");
   var deckEl = document.getElementById("deck");
+  var pokerTable = document.querySelector(".poker-table");
 
   var historyList = document.getElementById("history-list");
   var historyEmpty = document.getElementById("history-empty");
@@ -422,7 +448,7 @@
   // Deck (voting cards)
   // ------------------------------------------------------------------
   function castVote(value) {
-    selectedVote = value;
+    storeSelectedVote(value);
     apiAction("vote", { value: value });
     highlightSelectedDeckCard();
   }
@@ -594,7 +620,7 @@
     if (!window.confirm("Reset the round? This clears everyone's votes so the team can re-vote the same item. The note is kept.")) {
       return;
     }
-    selectedVote = null;
+    storeSelectedVote(null);
     highlightSelectedDeckCard();
     apiAction("reset");
   });
@@ -605,7 +631,7 @@
     if (!window.confirm("Start a new round? This clears all votes and the note.")) {
       return;
     }
-    selectedVote = null;
+    storeSelectedVote(null);
     highlightSelectedDeckCard();
     apiAction("newRound");
   });
@@ -621,6 +647,51 @@
   // ------------------------------------------------------------------
   // Rendering from `state`
   // ------------------------------------------------------------------
+
+  // Animation state — so one-shot effects (deal, flip, burst, settle,
+  // count-up, nudge) fire on the poll where the state flips, never on every
+  // 1.5s poll (which would replay them and make the UI "blink").
+  var lastRevealed = false;
+  var lastAllVoted = false;
+  var lastStatsKey = null;
+  var knownPlayerIds = {};
+  var votedPlayerIds = {};
+  var burstEmojis = ["🎉", "✨", "🎊", "⭐", "🥳", "🍀"];
+
+  // Agreement burst — a confetti pop rising from the table centre.
+  function fireBurst() {
+    if (!reactionLayer) return;
+    for (var i = 0; i < 16; i++) {
+      (function (i) {
+        setTimeout(function () {
+          var el = document.createElement("div");
+          el.className = "reaction-float reaction-burst";
+          el.style.left = 26 + Math.random() * 48 + "vw";
+          el.style.setProperty("--drift", (Math.random() * 2 - 1) * 90 + "px");
+          el.style.animationDelay = Math.random() * 0.25 + "s";
+          var glyph = document.createElement("span");
+          glyph.className = "reaction-float-glyph";
+          glyph.textContent =
+            burstEmojis[Math.floor(Math.random() * burstEmojis.length)];
+          el.appendChild(glyph);
+          el.addEventListener("animationend", function () {
+            el.remove();
+          });
+          reactionLayer.appendChild(el);
+        }, i * 24);
+      })(i);
+    }
+  }
+
+  // Round reset / new round: a one-shot felt "sweep" across the table.
+  function triggerTableSettle() {
+    if (!pokerTable) return;
+    pokerTable.classList.add("is-settling");
+    setTimeout(function () {
+      pokerTable.classList.remove("is-settling");
+    }, 700);
+  }
+
   function render(state) {
     // Topic (avoid clobbering while user is actively typing/focused)
     if (document.activeElement !== topicInput) {
@@ -645,9 +716,14 @@
     if (deckGroup) deckGroup.classList.toggle("hidden", selfIsSpectator);
     if (dockDivider) dockDivider.classList.toggle("hidden", selfIsSpectator);
 
-    // Sync selected vote from server state for self (in case of reconnect)
+    // Keep the selected card in sync. The server HIDES vote values until the
+    // reveal (self.vote is null mid-round exactly so results stay secret), so
+    // we never restore the highlight from self.vote while cards are down.
+    // Instead we hold the selection locally — persisted in sessionStorage by
+    // storeSelectedVote — so it survives a refresh; we only clear it once this
+    // player actually has no vote in the current round.
     if (self && !state.revealed) {
-      selectedVote = self.hasVoted ? selectedVote : null;
+      storeSelectedVote(self.hasVoted ? selectedVote : null);
     }
     if (state.revealed && self) {
       selectedVote = self.vote;
@@ -677,6 +753,43 @@
     // Reveal button disabled once already revealed
     revealBtn.disabled = !!state.revealed;
     revealBtn.textContent = state.revealed ? "Revealed" : "Reveal cards";
+
+    // ---- animations (fire only on the poll where the state flips) ----
+    var allVoted = false;
+    var nonSpectators = players.filter(function (p) {
+      return !p.isSpectator;
+    });
+    if (nonSpectators.length > 0) {
+      allVoted = nonSpectators.every(function (p) {
+        return p.hasVoted;
+      });
+    }
+
+    // Reveal button glows once every voter has cast but cards are still down.
+    revealBtn.classList.toggle("is-ready", amHost && allVoted && !state.revealed);
+
+    // Nudge the host the moment the last vote lands.
+    if (allVoted && !lastAllVoted && !state.revealed) {
+      showToast(
+        amHost
+          ? "Everyone has voted — hit Reveal cards! 🃏"
+          : "Everyone has voted. Waiting for the host to reveal…",
+        "success"
+      );
+    }
+    lastAllVoted = allVoted;
+
+    // Reveal: agreement confetti burst.
+    if (state.revealed && !lastRevealed) {
+      if (state.stats && state.stats.agreement) {
+        fireBurst();
+      }
+    }
+    // Round reset / new round: felt sweep.
+    if (!state.revealed && lastRevealed) {
+      triggerTableSettle();
+    }
+    lastRevealed = !!state.revealed;
   }
 
   // Signature of the last rendered player grid. We only rebuild the grid (which
@@ -731,9 +844,12 @@
   }
 
   // Build one player's card (avatar + vote face + name + host controls).
-  function buildPlayerCard(player, revealed, hostId) {
+  function buildPlayerCard(player, revealed, hostId, index, isNew, justVoted) {
     var card = document.createElement("div");
     card.className = "player-card";
+    if (isNew) {
+      card.classList.add("deal-in");
+    }
     if (player.id === selfId) {
       card.classList.add("is-self");
     }
@@ -741,7 +857,12 @@
       card.classList.add("is-spectator");
     }
 
-    card.appendChild(buildAvatar(player.name));
+    var avatar = buildAvatar(player.name);
+    // Happy bounce the moment a player's vote lands.
+    if (justVoted) {
+      avatar.classList.add("just-voted");
+    }
+    card.appendChild(avatar);
 
     // Compact vote indicator (a small chip) instead of a full-size card face,
     // so many seats fit without overflowing into the deck. State is conveyed by
@@ -757,10 +878,14 @@
       face.classList.add("is-value");
       face.textContent =
         player.vote !== null && player.vote !== undefined ? player.vote : "–";
+      // Staggered 3D flip as the votes come up (only for actual votes).
+      if (player.hasVoted) {
+        face.classList.add("flip-in");
+        face.style.animationDelay = Math.min(index, 12) * 55 + "ms";
+      }
     } else if (player.hasVoted) {
       card.classList.add("is-voted");
-      face.classList.add("is-check");
-      face.textContent = "✓";
+      face.classList.add("is-back");
     } else {
       card.classList.add("is-waiting");
       face.classList.add("is-idle");
@@ -809,8 +934,14 @@
 
     clearChildren(playersGrid);
 
-    players.forEach(function (player) {
-      playersGrid.appendChild(buildPlayerCard(player, revealed, hostId));
+    players.forEach(function (player, idx) {
+      var isNew = !knownPlayerIds[player.id];
+      if (isNew) knownPlayerIds[player.id] = true;
+      var justVoted = !votedPlayerIds[player.id] && player.hasVoted;
+      if (player.hasVoted) votedPlayerIds[player.id] = true;
+      playersGrid.appendChild(
+        buildPlayerCard(player, revealed, hostId, idx, isNew, justVoted)
+      );
     });
   }
 
@@ -856,17 +987,21 @@
   function appendChatMessage(msg) {
     if (!chatList) return;
     var li = document.createElement("li");
-    li.className = "chat-msg";
+    li.className = "chat-msg is-new";
     if (msg.byId === selfId) li.classList.add("is-self");
 
     // Head row mirrors .history-item-head: label on the left, value on the
     // right (sender name · timestamp).
     var head = document.createElement("div");
     head.className = "chat-msg-head";
+    var left = document.createElement("span");
+    left.className = "chat-msg-left";
+    left.appendChild(buildAvatar(msg.by));
     var who = document.createElement("span");
     who.className = "chat-msg-who";
     who.textContent = msg.byId === selfId ? "You" : msg.by;
-    head.appendChild(who);
+    left.appendChild(who);
+    head.appendChild(left);
     var when = document.createElement("span");
     when.className = "chat-msg-time";
     when.textContent = formatChatTime(msg.at);
@@ -1008,16 +1143,46 @@
   function renderStats(stats, revealed) {
     if (!revealed || !stats) {
       statsSection.classList.add("hidden");
+      lastStatsKey = null;
       return;
     }
     statsSection.classList.remove("hidden");
-    statAverage.textContent =
-      stats.average !== null && stats.average !== undefined ? stats.average : "-";
-    statMode.textContent =
-      stats.mode !== null && stats.mode !== undefined ? stats.mode : "-";
+    var key =
+      String(stats.average) + "|" + String(stats.mode) + "|" + String(stats.count);
+    if (key !== lastStatsKey) {
+      lastStatsKey = key;
+      animateNumber(statAverage, stats.average, 700);
+      animateNumber(statMode, stats.mode, 700);
+    }
     statCount.textContent =
       stats.count !== null && stats.count !== undefined ? stats.count : "-";
     agreementBadge.classList.toggle("hidden", !stats.agreement);
+  }
+
+  // Count-up helper for the revealed stats — runs once per reveal, then the
+  // numbers sit still until the next round.
+  function animateNumber(el, target, duration) {
+    if (!el) return;
+    var num = Number(target);
+    if (isNaN(num)) {
+      el.textContent =
+        target === null || target === undefined ? "-" : String(target);
+      return;
+    }
+    var decimals = Math.round(num) === num ? 0 : 1;
+    var start = null;
+    function step(ts) {
+      if (start === null) start = ts;
+      var p = Math.min((ts - start) / duration, 1);
+      var eased = 1 - Math.pow(1 - p, 3); // ease-out cubic
+      var val = num * eased;
+      el.textContent =
+        decimals === 0 ? String(Math.round(val)) : val.toFixed(decimals);
+      if (p < 1) {
+        requestAnimationFrame(step);
+      }
+    }
+    requestAnimationFrame(step);
   }
 
   // ------------------------------------------------------------------

@@ -39,11 +39,6 @@
   --radius-md: 12px;
   --radius-lg: 18px;
 
-  /* Vertical space the sticky bottom dock occupies. The sticky side panels
-     (chat, history) subtract this from their height so the dock never floats
-     over them while scrolling. */
-  --dock-clear: 236px;
-
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
     Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
 }
@@ -63,6 +58,24 @@ body {
   background: var(--color-bg);
   color: var(--color-text);
   -webkit-font-smoothing: antialiased;
+}
+
+/* Ambient animated aurora behind the app — shows through the frosted bars. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(42% 40% at 12% 6%, rgba(124, 58, 237, 0.15), transparent 62%),
+    radial-gradient(36% 34% at 90% 8%, rgba(139, 92, 246, 0.13), transparent 60%),
+    radial-gradient(50% 42% at 50% 100%, rgba(196, 181, 253, 0.15), transparent 65%);
+  animation: aurora 16s ease-in-out infinite alternate;
+}
+
+@keyframes aurora {
+  from { opacity: 0.55; transform: scale(1); }
+  to   { opacity: 1;    transform: scale(1.05); }
 }
 
 .hidden {
@@ -232,7 +245,17 @@ body {
     border-color 0.15s ease, color 0.15s ease;
 }
 
-.btn:active { transform: translateY(1px); }
+.btn:active { transform: translateY(1px) scale(0.96); }
+
+/* Reveal button pulses once every voter has cast a vote. */
+#reveal-btn.is-ready {
+  animation: ready-pulse 1.3s ease-in-out infinite;
+}
+
+@keyframes ready-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(124, 58, 237, 0.38); }
+  50%      { box-shadow: 0 0 0 9px rgba(124, 58, 237, 0); }
+}
 
 .btn-block { width: 100%; }
 
@@ -298,11 +321,31 @@ body {
   align-items: center;
   gap: 16px;
   flex-wrap: wrap;
-  background: var(--color-surface);
+  position: relative;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.72);
+  -webkit-backdrop-filter: blur(16px) saturate(1.6);
+  backdrop-filter: blur(16px) saturate(1.6);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
   padding: 12px 16px;
+}
+
+/* Slow light sweep across the top bar. */
+.topbar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(115deg, transparent 35%, rgba(255, 255, 255, 0.4) 50%, transparent 65%);
+  background-size: 240% 100%;
+  animation: sheen 7s ease-in-out infinite;
+}
+
+@keyframes sheen {
+  0%, 55% { background-position: 130% 0; }
+  100%    { background-position: -60% 0; }
 }
 
 .brand {
@@ -472,6 +515,12 @@ body {
   align-items: center;
   justify-content: center;
   border: 2px solid var(--color-surface);
+  animation: unread-pop 1.5s ease-in-out infinite;
+}
+
+@keyframes unread-pop {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.18); }
 }
 
 /* The pop-up chat window. */
@@ -588,6 +637,13 @@ body {
   padding: 10px 12px;
   background: var(--color-bg);
   transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+  /* Fresh messages slide in with a small bounce. */
+  animation: msg-in 0.26s ease-out backwards;
+}
+
+@keyframes msg-in {
+  from { opacity: 0; transform: translateY(9px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 .chat-msg:hover {
@@ -604,7 +660,20 @@ body {
   gap: 8px;
 }
 
-.chat-msg-head .player-avatar { display: none; }
+.chat-msg-left {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+/* Small gradient sender avatar inside each message. */
+.chat-msg-head .player-avatar {
+  width: 22px;
+  height: 22px;
+  font-size: 9px;
+  flex-shrink: 0;
+}
 
 .chat-msg-who {
   font-size: 12px;
@@ -721,6 +790,35 @@ body {
   pointer-events: none;
 }
 
+/* Slow drifting sheen across the felt. */
+.poker-table::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: radial-gradient(46% 46% at 30% 26%, rgba(255, 255, 255, 0.16), transparent 70%);
+  animation: felt-shimmer 9s ease-in-out infinite alternate;
+}
+
+@keyframes felt-shimmer {
+  from { opacity: 0.35; transform: translateX(-3%); }
+  to   { opacity: 0.9;  transform: translateX(3%); }
+}
+
+/* One-shot "sweep" across the felt when a round is reset / new — replaces the
+   idle sheen while it plays. */
+.poker-table.is-settling::after {
+  animation: felt-sweep 0.65s ease-out both;
+  background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.55) 50%, transparent 70%);
+  background-size: 250% 100%;
+}
+
+@keyframes felt-sweep {
+  from { background-position: 130% 0; opacity: 1; }
+  to   { background-position: -40% 0; opacity: 0; }
+}
+
 /* Players seated around the felt. */
 .players-grid {
   position: relative;
@@ -806,6 +904,28 @@ body {
 .player-card:hover .player-avatar { transform: scale(1.08) rotate(-3deg); }
 
 .player-card.is-spectator .player-avatar { filter: grayscale(0.5) opacity(0.85); }
+
+/* A new player's seat deals in from the left (the deck side). */
+.player-card.deal-in {
+  animation: seat-deal 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.15) backwards;
+}
+
+@keyframes seat-deal {
+  from { opacity: 0; transform: translate(-80px, 55px) rotate(-9deg) scale(0.5); }
+  to   { opacity: 1; transform: translate(0, 0) rotate(0) scale(1); }
+}
+
+/* The moment a player casts a vote, their avatar gives a happy bounce. */
+.player-avatar.just-voted {
+  animation: vote-bump 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.5);
+}
+
+@keyframes vote-bump {
+  0%   { transform: scale(1) rotate(0deg); }
+  35%  { transform: scale(1.28) rotate(-7deg); }
+  70%  { transform: scale(0.94) rotate(4deg); }
+  100% { transform: scale(1) rotate(0deg); }
+}
 
 .player-name {
   font-size: 12px;
@@ -910,6 +1030,31 @@ body {
   to   { transform: scale(1);   opacity: 1; }
 }
 
+/* Voted but hidden — a tiny face-down card back instead of a plain check. */
+.vote-chip.is-back {
+  background: linear-gradient(140deg, var(--color-primary) 0%, #5b21b6 100%);
+  color: rgba(255, 255, 255, 0.9);
+  border: 2px solid rgba(255, 255, 255, 0.7);
+  box-shadow: 0 3px 9px rgba(124, 58, 237, 0.35);
+  min-width: 30px;
+}
+
+.vote-chip.is-back::after {
+  content: "◆";
+  font-size: 9px;
+  opacity: 0.8;
+}
+
+/* Reveal: the vote chips flip up one by one (staggered via JS delays). */
+.vote-chip.is-value.flip-in {
+  animation: chip-flip 0.55s cubic-bezier(0.2, 0.85, 0.25, 1.15) both;
+}
+
+@keyframes chip-flip {
+  from { transform: perspective(220px) rotateY(96deg) scale(0.7); opacity: 0.15; }
+  to   { transform: perspective(220px) rotateY(0deg) scale(1); opacity: 1; }
+}
+
 /* ------------------------------------------------------------------------
    Stats (center of the table, shown on reveal)
    ------------------------------------------------------------------------ */
@@ -979,37 +1124,49 @@ body {
    Card deck — docked along the bottom as a horizontal strip
    ------------------------------------------------------------------------ */
 
-.deck-dock {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
-  padding: 8px 12px 10px;
-  position: sticky;
-  bottom: 12px;
-  /* Sit above the seats: .players-grid / .table-center are position:relative
-     z-index:1, so without a higher z-index here the player cards paint over
-     this pinned deck as you scroll. The opaque background then cleanly hides
-     whatever scrolls behind it. */
-  z-index: 50;
-  /* Stacked: a top row (React · Controls) above the card-picking row. */
+/* ---- Main body: left task bar + content column ------------------------- */
+.app-body {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-}
-
-/* Top row: React + Controls side by side, centered. */
-.dock-row {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-  align-items: stretch;
-  justify-content: center;
+  align-items: flex-start;
   gap: 16px;
 }
 
-/* A group inside the dock: its header + its row of controls. */
+/* Left task bar (sticky): Controls · React · Pick your card. */
+.control-dock {
+  width: 260px;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.78);
+  -webkit-backdrop-filter: blur(16px) saturate(1.6);
+  backdrop-filter: blur(16px) saturate(1.6);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  padding: 16px 14px;
+  position: sticky;
+  top: 16px;
+  /* Sit above the seats: .players-grid / .table-center are position:relative
+     z-index:1, so without a higher z-index here the player cards paint over
+     this pinned bar as you scroll. The opaque background then cleanly hides
+     whatever scrolls behind it. */
+  z-index: 50;
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+}
+
+/* Right content column holds the story input, table and voting history. */
+.stage-wrap {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* A group inside the task bar: its header + its row of controls. */
 .dock-group {
   display: flex;
   flex-direction: column;
@@ -1021,15 +1178,17 @@ body {
 /* The card-picking group spans the dock's full width so the deck can breathe. */
 .dock-group-cards { width: 100%; }
 
-/* The controls row: action buttons side by side to keep the dock compact. */
+/* Each group stretches to fill the left task bar width. */
+.control-dock .dock-group { width: 100%; }
+
+/* Controls in the left task bar: stacked full-width so each button is a row. */
 #controls-group .table-actions {
-  flex-direction: row;
-  flex-wrap: wrap;
-  justify-content: center;
+  flex-direction: column;
+  align-items: stretch;
   gap: 8px;
 }
 
-#controls-group .table-actions .btn { width: auto; }
+#controls-group .table-actions .btn { width: 100%; }
 
 /* Thin vertical rule separating the groups. */
 .dock-divider {
@@ -1174,7 +1333,7 @@ body {
   padding: 18px;
   position: sticky;
   top: 16px;
-  max-height: calc(100vh - 32px - var(--dock-clear));
+  max-height: calc(100vh - 32px);
   display: flex;
   flex-direction: column;
 }
@@ -1388,9 +1547,16 @@ body {
     max-height: none;
   }
 
-  /* Stack the top row too, and make its divider horizontal. */
-  .dock-row { flex-direction: column; align-items: center; }
-  .dock-row .dock-divider { width: 100%; height: 1px; align-self: auto; }
+  /* Task bar drops below the content and becomes a sticky bottom dock. */
+  .app-body { flex-direction: column; }
+  .control-dock {
+    width: 100%;
+    position: sticky;
+    bottom: 12px;
+    top: auto;
+    max-height: none;
+    overflow: visible;
+  }
 }
 
 @media (max-width: 560px) {
@@ -1504,6 +1670,20 @@ body {
   white-space: nowrap;
 }
 
+/* Agreement burst — faster, wider, rising from the table centre. */
+.reaction-float.reaction-burst {
+  bottom: 45vh;
+  animation: burst-rise 1.15s cubic-bezier(0.2, 0.7, 0.4, 1) forwards;
+}
+
+.reaction-float.reaction-burst .reaction-float-who { display: none; }
+
+@keyframes burst-rise {
+  0%   { opacity: 0; transform: translate(0, 0) scale(0.3); }
+  15%  { opacity: 1; transform: translate(calc(var(--drift) * 0.35), -18px) scale(1); }
+  100% { opacity: 0; transform: translate(var(--drift), -30vh) scale(1.15); }
+}
+
 @keyframes reaction-rise {
   0% {
     opacity: 0;
@@ -1525,4 +1705,15 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .reaction-float { animation-duration: 1.6s; }
   .reaction-btn:hover { transform: none; }
+  body::before { animation: none; }
+  .topbar::after { animation: none; }
+  .poker-table::after { animation: none; }
+  .vote-chip.is-value.flip-in,
+  .vote-chip.is-value { animation: none; }
+  .player-card.deal-in { animation: none; }
+  .player-avatar.just-voted { animation: none; }
+  .chat-msg { animation: none; }
+  .chat-unread { animation: none; }
+  #reveal-btn.is-ready { animation: none; }
+  .reaction-float.reaction-burst { animation: none; }
 }

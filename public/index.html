@@ -81,10 +81,51 @@
       </div>
     </header>
 
-    <p id="host-hint" class="host-hint hidden">Only the host can reveal cards, reset the round, or start a new one.</p>
+    <!-- Left task bar (vertical): Controls · React · Pick your card -->
+    <div class="app-body">
+      <aside id="control-dock" class="control-dock">
 
-    <!-- Stage: table (center) · voting history (right) -->
-    <div class="stage">
+        <!-- Controls -->
+        <div id="controls-group" class="dock-group">
+          <div class="deck-dock-head">
+            <span class="deck-title-emoji">🎛️</span>
+            <span class="deck-title-text">Controls</span>
+          </div>
+          <div class="table-actions">
+            <button id="reveal-btn" class="btn btn-primary">Reveal cards</button>
+            <button id="reset-btn" class="btn btn-secondary">Reset round</button>
+            <button id="new-round-btn" class="btn btn-secondary">New round</button>
+          </div>
+        </div>
+
+        <div class="dock-divider dock-divider-h" aria-hidden="true"></div>
+
+        <!-- React -->
+        <div id="react-group" class="dock-group">
+          <div class="deck-dock-head">
+            <span class="deck-title-emoji">💬</span>
+            <span class="deck-title-text">React</span>
+          </div>
+          <div id="reaction-bar" class="reaction-bar" role="group" aria-label="Send a reaction"></div>
+        </div>
+
+        <div id="dock-divider" class="dock-divider dock-divider-h" aria-hidden="true"></div>
+
+        <!-- Pick your card -->
+        <div id="deck-group" class="dock-group dock-group-cards">
+          <div class="deck-dock-head">
+            <span class="deck-title-emoji">🃏</span>
+            <span class="deck-title-text">Pick your card</span>
+          </div>
+          <div id="deck" class="deck"></div>
+        </div>
+      </aside>
+
+      <div class="stage-wrap">
+        <p id="host-hint" class="host-hint hidden">Only the host can reveal cards, reset the round, or start a new one.</p>
+
+        <!-- Stage: table (center) · voting history (right) -->
+        <div class="stage">
       <main class="stage-main">
 
         <section class="topic-section">
@@ -138,44 +179,9 @@
         </p>
         <ol id="history-list" class="history-list"></ol>
       </aside>
+      </div>
     </div>
-
-    <!-- Bottom dock: top row = React + Controls, cards row below. -->
-    <section id="deck-section" class="deck-section deck-dock">
-      <div class="dock-row">
-        <div class="dock-group">
-          <div class="deck-dock-head">
-            <span class="deck-title-emoji">💬</span>
-            <span class="deck-title-text">React</span>
-          </div>
-          <div id="reaction-bar" class="reaction-bar" role="group" aria-label="Send a reaction"></div>
-        </div>
-
-        <div class="dock-divider" aria-hidden="true"></div>
-
-        <div id="controls-group" class="dock-group">
-          <div class="deck-dock-head">
-            <span class="deck-title-emoji">🎛️</span>
-            <span class="deck-title-text">Controls</span>
-          </div>
-          <div class="table-actions">
-            <button id="reveal-btn" class="btn btn-primary">Reveal cards</button>
-            <button id="reset-btn" class="btn btn-secondary">Reset round</button>
-            <button id="new-round-btn" class="btn btn-secondary">New round</button>
-          </div>
-        </div>
-      </div>
-
-      <div id="dock-divider" class="dock-divider dock-divider-h" aria-hidden="true"></div>
-
-      <div id="deck-group" class="dock-group dock-group-cards">
-        <div class="deck-dock-head">
-          <span class="deck-title-emoji">🃏</span>
-          <span class="deck-title-text">Pick your card</span>
-        </div>
-        <div id="deck" class="deck"></div>
-      </div>
-    </section>
+  </div>
 
     <!-- Full-viewport layer the reactions float up through. -->
     <div id="reaction-layer" class="reaction-layer" aria-hidden="true"></div>
