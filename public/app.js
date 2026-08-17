@@ -729,7 +729,13 @@
     // storeSelectedVote — so it survives a refresh; we only clear it once this
     // player actually has no vote in the current round.
     if (self && !state.revealed) {
-      storeSelectedVote(self.hasVoted ? selectedVote : null);
+      // Only clear selectedVote if the user hasn't voted yet (selectedVote is null).
+      // If they already voted, preserve the local selection so the deck card stays highlighted
+      // until the round resets. The server has the authoritative vote state, and we don't
+      // want to wipe the UI highlight based on a hasVoted flag that may lag on the first poll.
+      if (selectedVote === null) {
+        storeSelectedVote(null);
+      }
     }
     if (state.revealed && self) {
       selectedVote = self.vote;
