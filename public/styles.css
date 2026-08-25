@@ -446,6 +446,34 @@ body::before {
   font-size: 13px;
 }
 
+/* ---- Room timer (top bar) ---------------------------------------------- */
+.topbar-timer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: var(--color-bg);
+  border: 1.5px solid var(--color-border);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.timer-icon {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.timer-display {
+  font-weight: 800;
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  color: var(--color-text);
+  min-width: 60px;
+  text-align: center;
+}
+
 /* ------------------------------------------------------------------------
    Stage: table (main) + history rail
    ------------------------------------------------------------------------ */
@@ -1565,6 +1593,17 @@ body::before {
   .topbar { gap: 10px; }
 
   .topbar-invite { order: 3; width: 100%; }
+
+  /* Room timer stays compact next to the user in the top bar. */
+  .topbar-timer {
+    gap: 4px;
+    padding: 4px 8px;
+  }
+
+  .timer-display {
+    font-size: 13px;
+    min-width: 54px;
+  }
 
   /* Floating chat fills most of the small screen when open. */
   .chat-widget { right: 12px; bottom: 12px; }

@@ -193,6 +193,45 @@
   var reactionBar = document.getElementById("reaction-bar");
   var reactionLayer = document.getElementById("reaction-layer");
 
+  // Room timer — counts up from the moment the host creates & joins the room,
+  // in HH:MM:SS. The reference timestamp comes from the server (state.createdAt),
+  // so every participant and any page refresh sees the SAME clock.
+  var timerDisplay = document.getElementById("timer-display");
+  var roomCreatedAt = null; // server timestamp when host joined; real Start reference
+  var timerInterval = null;
+
+  function formatTimer(ms) {
+    var totalSec = Math.max(0, Math.floor(ms / 1000));
+    var h = Math.floor(totalSec / 3600);
+    var m = Math.floor((totalSec % 3600) / 60);
+    var s = totalSec % 60;
+    function pad(n) { return String(n).padStart(2, "0"); }
+    return pad(h) + ":" + pad(m) + ":" + pad(s);
+  }
+
+  function updateTimer() {
+    if (!timerDisplay) return;
+    var ms = roomCreatedAt ? Date.now() - roomCreatedAt : 0;
+    timerDisplay.textContent = formatTimer(ms);
+  }
+
+  function startTimer() {
+    if (!timerInterval) {
+      timerInterval = setInterval(updateTimer, 1000);
+      updateTimer();
+    }
+  }
+
+  // The host's join response (the very first join on a new room) carries the
+  // room's createdAt. All clients sync to that timestamp so the wall clock in
+  // the top bar is identical for everyone.
+  function syncRoomTimer(createdAt) {
+    if (typeof createdAt === "number" && createdAt > 0) {
+      roomCreatedAt = createdAt;
+      startTimer();
+    }
+  }
+
   // Tracks how many history rounds we've already rendered, so a newly
   // added round can animate in rather than the whole list re-flashing.
   var renderedHistoryCount = 0;
@@ -699,6 +738,13 @@
   }
 
   function render(state) {
+    // Keep the room timer synced to the server's creation timestamp. Every
+    // poll refreshes the reference, so all participants see the same wall
+    // clock counting up from the moment the host joined.
+    if (state && state.createdAt) {
+      syncRoomTimer(state.createdAt);
+    }
+
     // Topic (avoid clobbering while user is actively typing/focused)
     if (document.activeElement !== topicInput) {
       topicInput.value = state.topic || "";
