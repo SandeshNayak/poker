@@ -1152,6 +1152,15 @@
     return !!chatWidget && !chatWidget.classList.contains("is-closed");
   }
 
+  // Mobile keyboards cover on-screen content. On touch (coarse-pointer)
+  // devices we avoid force-focusing the chat input when the panel opens
+  // (the on-screen keyboard would jump up and hide the message list / send
+  // button). The user taps the input when they're ready to type; on desktop
+  // with a fine pointer we keep the old behaviour (focus for instant typing).
+  var primaryIsCoarsePointer =
+    "matchMedia" in window &&
+    window.matchMedia("(hover: none) and (pointer: coarse)").matches;
+
   // persist defaults to true; auto-open (on an incoming message) passes false
   // so it doesn't overwrite the user's own open/closed preference.
   function setChatOpen(open, persist) {
@@ -1166,7 +1175,9 @@
       chatUnreadCount = 0;
       refreshChatUnreadBadge();
       if (chatList) chatList.scrollTop = 0;
-      if (chatInput) chatInput.focus();
+      // Focus only on fine-pointer devices; on touch, let the user invoke the
+      // keyboard themselves (avoids the keyboard covering the panel).
+      if (chatInput && !primaryIsCoarsePointer) chatInput.focus();
     }
     if (persist === false) return;
     try {
