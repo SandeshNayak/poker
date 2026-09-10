@@ -79,22 +79,9 @@ textarea {
   touch-action: manipulation;
 }
 
-/* Ambient animated aurora behind the app — shows through the frosted bars. */
+/* Standard clean background (no aurora/glass) */
 body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  background:
-    radial-gradient(42% 40% at 12% 6%, rgba(124, 58, 237, 0.15), transparent 62%),
-    radial-gradient(36% 34% at 90% 8%, rgba(139, 92, 246, 0.13), transparent 60%),
-    radial-gradient(50% 42% at 50% 100%, rgba(196, 181, 253, 0.15), transparent 65%);
-  animation: aurora 16s ease-in-out infinite alternate;
-}
-
-@keyframes aurora {
-  from { opacity: 0.55; transform: scale(1); }
-  to   { opacity: 1;    transform: scale(1.05); }
+  display: none;
 }
 
 .hidden {
@@ -266,14 +253,10 @@ body::before {
 
 .btn:active { transform: translateY(1px) scale(0.96); }
 
-/* Reveal button pulses once every voter has cast a vote. */
+/* Reveal button glows once every voter has cast a vote. */
 #reveal-btn.is-ready {
-  animation: ready-pulse 1.3s ease-in-out infinite;
-}
-
-@keyframes ready-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(124, 58, 237, 0.38); }
-  50%      { box-shadow: 0 0 0 9px rgba(124, 58, 237, 0); }
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.35), var(--shadow-glow);
+  transform: translateY(-1px);
 }
 
 .btn-block { width: 100%; }
@@ -308,12 +291,16 @@ body::before {
   border-color: var(--color-accent);
 }
 
-/* Quiet ghost button (top-bar "Copy link"). */
 .btn-ghost {
   background: transparent;
   color: var(--color-primary-dark);
   border: 1.5px solid var(--color-border);
-  padding: 8px 14px;
+  height: 38px;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
 }
 
 .btn-ghost:hover {
@@ -326,7 +313,7 @@ body::before {
    ------------------------------------------------------------------------ */
 
 .app {
-  max-width: 1240px;
+  max-width: 1320px;
   margin: 0 auto;
   padding: 16px 18px 40px;
   display: flex;
@@ -334,37 +321,22 @@ body::before {
   gap: 16px;
 }
 
-/* ---- Slim top bar ------------------------------------------------------ */
+/* ---- Standard solid top bar ------------------------------------------ */
 .topbar {
   display: flex;
   align-items: center;
   gap: 16px;
   flex-wrap: wrap;
   position: relative;
-  overflow: hidden;
-  background: rgba(255, 255, 255, 0.72);
-  -webkit-backdrop-filter: blur(16px) saturate(1.6);
-  backdrop-filter: blur(16px) saturate(1.6);
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
   padding: 12px 16px;
 }
 
-/* Slow light sweep across the top bar. */
 .topbar::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: linear-gradient(115deg, transparent 35%, rgba(255, 255, 255, 0.4) 50%, transparent 65%);
-  background-size: 240% 100%;
-  animation: sheen 7s ease-in-out infinite;
-}
-
-@keyframes sheen {
-  0%, 55% { background-position: 130% 0; }
-  100%    { background-position: -60% 0; }
+  display: none;
 }
 
 .brand {
@@ -411,7 +383,8 @@ body::before {
 .invite-input {
   flex: 1;
   min-width: 0;
-  padding: 9px 12px;
+  height: 38px;
+  padding: 0 12px;
   font-size: 13px;
   letter-spacing: 0.01em;
   background: var(--color-bg);
@@ -459,10 +432,32 @@ body::before {
 
 .tag-spectator { background: #eef0f4; color: var(--color-spectator); }
 
+.leave-btn {
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  margin-left: 4px;
+}
+
+.leave-btn:hover {
+  background: #fee2e2;
+  color: #ef4444;
+  border-color: #fca5a5;
+}
+
 .host-hint {
-  margin: -4px 4px 0;
+  margin: 0 0 6px;
   color: var(--color-text-muted);
   font-size: 13px;
+  font-weight: 400;
+  line-height: 1.4;
 }
 
 /* ---- Room timer (top bar) ---------------------------------------------- */
@@ -498,8 +493,9 @@ body::before {
    ------------------------------------------------------------------------ */
 
 .stage {
+  width: 100%;
   display: flex;
-  align-items: flex-start;
+  flex-direction: column;
   gap: 16px;
 }
 
@@ -511,16 +507,18 @@ body::before {
   min-width: 0;
 }
 
-/* ---- Floating Messenger-style chat (bottom-right) --------------------- */
+/* ---- Floating Messenger-style chat (pinned bottom-left so right controls/deck are unblocked) ---- */
 .chat-widget {
   position: fixed;
-  right: 20px;
+  left: 20px;
+  right: auto;
   bottom: 20px;
   z-index: 1400;
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
+  align-items: flex-start;
   gap: 12px;
+  pointer-events: none;
 }
 
 /* Round launcher bubble — always visible; toggles the panel. */
@@ -537,6 +535,7 @@ body::before {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  pointer-events: auto;
   transition: transform 0.15s ease, background 0.15s ease;
 }
 
@@ -562,12 +561,6 @@ body::before {
   align-items: center;
   justify-content: center;
   border: 2px solid var(--color-surface);
-  animation: unread-pop 1.5s ease-in-out infinite;
-}
-
-@keyframes unread-pop {
-  0%, 100% { transform: scale(1); }
-  50%      { transform: scale(1.18); }
 }
 
 /* The pop-up chat window. */
@@ -582,7 +575,8 @@ body::before {
   padding: 16px;
   display: flex;
   flex-direction: column;
-  transform-origin: bottom right;
+  transform-origin: bottom left;
+  pointer-events: auto;
   transition: opacity 0.18s ease, transform 0.18s ease;
 }
 
@@ -592,6 +586,7 @@ body::before {
   transform: scale(0.85) translateY(12px);
   pointer-events: none;
   visibility: hidden;
+  display: none;
 }
 
 .roster-header {
@@ -797,6 +792,7 @@ body::before {
 .chat-send-btn:active { transform: scale(0.94); }
 
 .topic-section {
+  width: 100%;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
@@ -804,21 +800,32 @@ body::before {
   padding: 16px 18px;
 }
 
-.topic-input { font-size: 16px; font-weight: 600; }
+.topic-input {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.topic-input::placeholder {
+  font-weight: 400;
+  color: var(--color-text-muted);
+}
 
 /* ---- The poker table --------------------------------------------------- */
 .table-section {
+  width: 100%;
   background: transparent;
 }
 
+/* Standard estimation board container (no glass/felt theme) */
 .poker-table {
+  width: 100%;
   position: relative;
-  background: var(--felt);
-  border-radius: 140px / 92px;
-  border: 10px solid var(--felt-rail);
-  box-shadow: var(--shadow-lg), inset 0 1px 4px rgba(17, 24, 39, 0.06),
-    inset 0 0 0 2px var(--felt-line);
-  padding: 40px 36px;
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-sm);
+  padding: 40px 32px;
   min-height: 360px;
   display: flex;
   flex-direction: column;
@@ -827,43 +834,10 @@ body::before {
   gap: 26px;
 }
 
-/* Faint painted ring on the felt, like a real card table. */
-.poker-table::before {
-  content: "";
-  position: absolute;
-  inset: 22px;
-  border-radius: 120px / 76px;
-  border: 2px dashed var(--felt-line);
-  pointer-events: none;
-}
-
-/* Slow drifting sheen across the felt. */
+/* Remove casino dashed rings, glass sheen, and sweeps */
+.poker-table::before,
 .poker-table::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  pointer-events: none;
-  background: radial-gradient(46% 46% at 30% 26%, rgba(255, 255, 255, 0.16), transparent 70%);
-  animation: felt-shimmer 9s ease-in-out infinite alternate;
-}
-
-@keyframes felt-shimmer {
-  from { opacity: 0.35; transform: translateX(-3%); }
-  to   { opacity: 0.9;  transform: translateX(3%); }
-}
-
-/* One-shot "sweep" across the felt when a round is reset / new — replaces the
-   idle sheen while it plays. */
-.poker-table.is-settling::after {
-  animation: felt-sweep 0.65s ease-out both;
-  background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.55) 50%, transparent 70%);
-  background-size: 250% 100%;
-}
-
-@keyframes felt-sweep {
-  from { background-position: 130% 0; opacity: 1; }
-  to   { background-position: -40% 0; opacity: 0; }
+  display: none;
 }
 
 /* Players seated around the felt. */
@@ -1178,17 +1152,15 @@ body::before {
   gap: 16px;
 }
 
-/* Left task bar (sticky): Controls · React · Pick your card. */
+/* Right task bar (sticky): Controls · React · Pick your card. */
 .control-dock {
   width: 260px;
   flex-shrink: 0;
-  background: rgba(255, 255, 255, 0.78);
-  -webkit-backdrop-filter: blur(16px) saturate(1.6);
-  backdrop-filter: blur(16px) saturate(1.6);
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
-  padding: 16px 14px;
+  box-shadow: var(--shadow-sm);
+  padding: 18px;
   position: sticky;
   top: 16px;
   /* Sit above the seats: .players-grid / .table-center are position:relative
@@ -1204,7 +1176,7 @@ body::before {
   gap: 12px;
 }
 
-/* Right content column holds the story input, table and voting history. */
+/* Center content column holds the story input and table. */
 .stage-wrap {
   flex: 1;
   min-width: 0;
@@ -1254,16 +1226,41 @@ body::before {
 .deck-dock-head {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
+  width: 100%;
   gap: 6px;
-  font-size: 11px;
-  font-weight: 700;
+  font-size: 12px;
+  font-weight: 800;
   color: var(--color-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
 .deck-title-text { color: var(--color-primary-dark); }
+
+.clear-vote-btn {
+  margin-left: auto;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--color-danger);
+  background: rgba(239, 68, 68, 0.06);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: 999px;
+  padding: 2px 8px;
+  cursor: pointer;
+  text-transform: none;
+  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease, transform 0.1s ease;
+  line-height: 1.3;
+}
+
+.clear-vote-btn:hover {
+  color: #ffffff;
+  background: var(--color-danger);
+  border-color: var(--color-danger);
+  transform: translateY(-1px);
+}
 
 .deck {
   display: flex;
@@ -1592,44 +1589,36 @@ body::before {
     width: 100%;
     position: static;
     max-height: none;
+    order: 3;
   }
 
-  /* Task bar drops below the content and becomes a sticky bottom dock. */
+  /* MOBILE FIX: the task bar must NEVER float over the game. Previously it
+     was position:sticky bottom, which — combined with controls + reactions +
+     the whole deck living inside it — made it ~380px tall and permanently
+     covered half the screen, blocking taps on the table underneath. Now it
+     flows normally AFTER the stage (table first, controls/deck below). */
   .app-body { flex-direction: column; }
+
+  .stage-wrap { order: 1; }
+
   .control-dock {
+    order: 2;
+    position: static;
     width: 100%;
-    position: sticky;
-    bottom: 12px;
-    top: auto;
     max-height: none;
     overflow: visible;
-    /* Solid frosted backing + safe-area inset so it never sits under the
-       mobile home indicator, and reads as a floating bottom dock. */
-    background: rgba(255, 255, 255, 0.92);
-    box-shadow: var(--shadow-lg);
     padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
-    z-index: 60;
   }
 
-  /* Collapse the three stacked groups into a compact 2-row dock:
-     controls on top, reactions + deck below, so a phone shows everything
-     without scrolling the dock itself. */
-  .control-dock {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 10px;
-  }
-
-  /* Keep the groups from stretching full-width; stack them tightly. */
+  /* Groups stack tightly, full width. */
   #controls-group,
   #react-group,
   #deck-group { align-items: stretch; }
 
-  /* Controls as a single horizontal row (they're currently vertical). */
+  /* Controls become one thumb-friendly horizontal row. */
   #controls-group .table-actions {
     flex-direction: row;
     flex-wrap: nowrap;
-    justify-content: stretch;
   }
 
   #controls-group .table-actions .btn {
@@ -1639,11 +1628,24 @@ body::before {
     font-size: 13px;
   }
 
+  /* Deck + reactions: ONE row each that pans sideways instead of wrapping
+     (wrapping is what ballooned the dock and pushed the table off-screen). */
+  .control-dock .deck,
+  .control-dock .reaction-bar {
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+
+  .control-dock .deck { gap: 8px; padding-bottom: 4px; }
+
   /* Headers shrink to save height. */
   .control-dock .deck-dock-head { gap: 4px; font-size: 10px; }
   .control-dock .deck-dock-head .deck-title-emoji { font-size: 12px; }
 
-  /* The horizontal dividers become vertical so the dock reads as a bar. */
+  /* Horizontal rule separating the groups. */
   .control-dock .dock-divider-h {
     width: 100%;
     height: 1px;
@@ -1655,9 +1657,13 @@ body::before {
 @media (max-width: 560px) {
   .app { padding: 12px 10px 30px; }
 
-  .topbar { gap: 10px; padding: 10px 12px; }
+  /* Top bar: drop the full invite-URL field on phones (it forced the bar to
+     wrap into a ~140px tall block). The Copy link button still works because
+     it reads the input's value from the DOM even while hidden. */
+  .topbar { gap: 8px; padding: 10px 12px; }
 
-  .topbar-invite { order: 3; width: 100%; }
+  .topbar-invite { order: 3; width: auto; margin-left: auto; }
+  .invite-input { display: none; }
 
   /* Room timer stays compact next to the user in the top bar. */
   .topbar-timer {
@@ -1676,7 +1682,7 @@ body::before {
 
   /* Floating chat becomes a bottom sheet that fills the width above the
      home-bar safe area. */
-  .chat-widget { right: 10px; bottom: 10px; }
+  .chat-widget { left: 10px; right: auto; bottom: 10px; }
   .chat-panel {
     width: calc(100vw - 20px);
     height: min(78vh, 560px);
@@ -1685,12 +1691,10 @@ body::before {
 
   .poker-table {
     padding: 24px 14px;
-    border-radius: 34px;
-    border-width: 6px;
+    border-radius: var(--radius-md);
+    border-width: 1px;
     gap: 18px;
   }
-
-  .poker-table::before { border-radius: 28px; inset: 16px; }
 
   .players-grid { gap: 8px; }
 
@@ -1887,3 +1891,81 @@ body::before {
   #reveal-btn.is-ready { animation: none; }
   .reaction-float.reaction-burst { animation: none; }
 }
+
+/* ------------------------------------------------------------------------
+   Live Sync & Host Claim Controls
+   ------------------------------------------------------------------------ */
+
+.topbar-sync {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 38px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.topbar-sync:hover {
+  background: var(--color-primary-light);
+  border-color: var(--color-accent);
+  color: var(--color-primary-dark);
+}
+
+.sync-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.topbar-sync.is-synced .sync-dot {
+  transform: scale(1.35);
+  box-shadow: 0 0 0 6px rgba(16, 185, 129, 0.2);
+}
+
+.player-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.kick-btn {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-size: 13px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0.4;
+  transition: all 0.15s ease;
+  padding: 0;
+}
+
+.player-card:hover .kick-btn,
+.kick-btn:focus-visible {
+  opacity: 1;
+}
+
+.kick-btn:hover {
+  background: #fee2e2;
+  color: #ef4444;
+  border-color: #fca5a5;
+  transform: scale(1.1);
+}
+

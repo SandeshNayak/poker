@@ -39,6 +39,7 @@ function readJsonBody(req) {
 const ACTIONS = {
   join: (roomId, playerId, body) => store.join(roomId, playerId, body.name, body.isSpectator),
   vote: (roomId, playerId, body) => store.vote(roomId, playerId, body.value),
+  unvote: (roomId, playerId) => store.unvote(roomId, playerId),
   react: (roomId, playerId, body) => store.react(roomId, playerId, body.emoji),
   chat: (roomId, playerId, body) => store.sendChat(roomId, playerId, body.text),
   reveal: (roomId, playerId) => store.reveal(roomId, playerId),
@@ -48,6 +49,7 @@ const ACTIONS = {
   setTopic: (roomId, playerId, body) => store.setTopic(roomId, playerId, body.topic),
   changeName: (roomId, playerId, body) => store.changeName(roomId, playerId, body.name),
   transferHost: (roomId, playerId, body) => store.transferHost(roomId, playerId, body.targetId),
+  kickPlayer: (roomId, playerId, body) => store.kickPlayer(roomId, playerId, body.targetId),
   leave: (roomId, playerId) => store.leave(roomId, playerId),
 };
 

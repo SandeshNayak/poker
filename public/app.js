@@ -13,7 +13,7 @@
   ];
   var NAME_STORAGE_KEY = "planningPoker.name";
   var PLAYER_ID_STORAGE_KEY = "planningPoker.playerId";
-  var POLL_INTERVAL_MS = 1500;
+  var POLL_INTERVAL_MS = 15 * 1000; // auto-sync state every 15 seconds
 
   // Emoji reactions everyone can send. Must stay in sync with the server-side
   // ALLOWED_REACTIONS allow-list in lib/store.js.
@@ -152,6 +152,7 @@
   var copyLinkBtn = document.getElementById("copy-link-btn");
   var userNameLabel = document.getElementById("user-name");
   var spectatorTag = document.getElementById("spectator-tag");
+  var leaveRoomBtn = document.getElementById("leave-room-btn");
 
   var topicInput = document.getElementById("topic-input");
   var playersGrid = document.getElementById("players-grid");
@@ -176,11 +177,13 @@
   var revealBtn = document.getElementById("reveal-btn");
   var resetBtn = document.getElementById("reset-btn");
   var newRoundBtn = document.getElementById("new-round-btn");
+  var syncStatusBtn = document.getElementById("sync-status");
   var hostHint = document.getElementById("host-hint");
 
   var deckGroup = document.getElementById("deck-group");
   var dockDivider = document.getElementById("dock-divider");
   var deckEl = document.getElementById("deck");
+  var clearVoteBtn = document.getElementById("clear-vote-btn");
   var pokerTable = document.querySelector(".poker-table");
 
   var historyList = document.getElementById("history-list");
@@ -313,6 +316,42 @@
   // ------------------------------------------------------------------
   // Polling (replaces the Socket.IO "state" event stream)
   // ------------------------------------------------------------------
+  function flashSync() {
+    if (syncStatusBtn) {
+      syncStatusBtn.classList.add("is-synced");
+      setTimeout(function () {
+        syncStatusBtn.classList.remove("is-synced");
+      }, 500);
+    }
+  }
+
+  function triggerSync() {
+    return apiState()
+      .then(function (state) {
+        latestState = state;
+        render(state);
+        maybeRejoin(state);
+        flashSync();
+      })
+      .catch(function () {});
+  }
+
+  function handleKicked(msg) {
+    hasJoined = false;
+    if (pollTimer) {
+      clearInterval(pollTimer);
+      pollTimer = null;
+    }
+    try {
+      window.sessionStorage.removeItem(JOIN_STORAGE_KEY);
+      window.sessionStorage.removeItem(PLAYER_ID_STORAGE_KEY + "." + roomId);
+      window.sessionStorage.removeItem(SET_SELECTED_KEY);
+    } catch (_) {}
+    appRoot.classList.add("hidden");
+    joinModal.classList.remove("hidden");
+    showToast(msg || "You were removed from this room by the host.", "error");
+  }
+
   function startPolling() {
     if (pollTimer) {
       return;
@@ -320,9 +359,14 @@
     pollTimer = setInterval(function () {
       apiState()
         .then(function (state) {
+          if (state && state.kicked) {
+            handleKicked(state.error);
+            return;
+          }
           latestState = state;
           render(state);
           maybeRejoin(state);
+          flashSync();
         })
         .catch(function () {
           /* transient network/error — ignore and try again next tick */
@@ -332,15 +376,14 @@
 
   // ------------------------------------------------------------------
   // Self-heal: if we've joined but the server's player list no longer
-  // contains us, silently re-join. This covers two cases the storage fix
-  // alone doesn't fully close:
-  //   1. A concurrent, non-atomic write on the backend (two devices joining
-  //      within ~200ms) that dropped our record on a last-write-wins save.
-  //   2. Our room key expiring/being pruned while the tab was idle.
-  // Re-joining reinstates our player entry within one poll (~1.5s).
+  // contains us, silently re-join.
   // ------------------------------------------------------------------
   function maybeRejoin(state) {
     if (!hasJoined || rejoinInFlight) {
+      return;
+    }
+    if (state && state.kicked) {
+      handleKicked(state.error);
       return;
     }
     var players = (state && state.players) || [];
@@ -352,8 +395,11 @@
     }
     rejoinInFlight = true;
     apiAction("join", { name: joinName, isSpectator: joinIsSpectator })
-      .then(function () {
+      .then(function (res) {
         rejoinInFlight = false;
+        if (res && !res.ok && res.error && res.error.indexOf("removed") !== -1) {
+          handleKicked(res.error);
+        }
       })
       .catch(function () {
         rejoinInFlight = false;
@@ -392,9 +438,6 @@
     return apiAction("join", { name: name, isSpectator: isSpectator }).then(function (data) {
       if (data.ok) {
         selfId = playerId;
-        // Remember join details so polling can silently re-join if we ever
-        // fall out of the room's player list (see maybeRejoin), and so a
-        // refresh can resume without prompting again.
         hasJoined = true;
         joinName = name;
         joinIsSpectator = isSpectator;
@@ -403,6 +446,8 @@
         appRoot.classList.remove("hidden");
         setupInviteUrl();
         startPolling();
+      } else if (data.error && data.error.indexOf("removed") !== -1) {
+        handleKicked(data.error);
       }
       return data;
     });
@@ -431,6 +476,26 @@
   if (resumed && resumed.name) {
     enterRoom(resumed.name, !!resumed.isSpectator);
   }
+
+  // ------------------------------------------------------------------
+  // Auto-refresh page every 15 seconds (preserves session and votes)
+  // ------------------------------------------------------------------
+  var AUTO_REFRESH_INTERVAL_MS = 15 * 1000;
+  setInterval(function () {
+    // Only auto-reload if the user is in the room
+    if (!hasJoined && !loadJoin()) {
+      return;
+    }
+    // Don't interrupt user if actively typing in an input or textarea
+    if (
+      document.activeElement &&
+      (document.activeElement.tagName === "INPUT" ||
+       document.activeElement.tagName === "TEXTAREA")
+    ) {
+      return;
+    }
+    window.location.reload();
+  }, AUTO_REFRESH_INTERVAL_MS);
 
   // ------------------------------------------------------------------
   // Invite URL + copy
@@ -486,16 +551,30 @@
   // ------------------------------------------------------------------
   // Deck (voting cards)
   // ------------------------------------------------------------------
-  function castVote(value) {
-    // Guard against double-click / rapid-fire votes within the same poll cycle.
-    if (window.__ppLastVoteTs) {
-      var now = Date.now();
-      if (now - window.__ppLastVoteTs < 1000) return; // ignore within 1s
-    }
-    window.__ppLastVoteTs = Date.now();
-    storeSelectedVote(value);
-    apiAction("vote", { value: value });
+  function unvoteCard() {
+    window.__ppLastVoteTs = 0;
+    storeSelectedVote(null);
     highlightSelectedDeckCard();
+    apiAction("unvote");
+  }
+
+  function castVote(value) {
+    // If the user clicks the card they already selected, unselect it!
+    if (selectedVote !== null && String(selectedVote) === String(value)) {
+      unvoteCard();
+      return;
+    }
+
+    // Guard against rapid-fire accidental clicking within 250ms
+    var now = Date.now();
+    if (window.__ppLastVoteTs && (now - window.__ppLastVoteTs < 250)) {
+      return;
+    }
+    window.__ppLastVoteTs = now;
+
+    storeSelectedVote(value);
+    highlightSelectedDeckCard();
+    apiAction("vote", { value: value });
   }
 
   function buildDeck() {
@@ -540,11 +619,17 @@
     deckEl.appendChild(custom);
   }
 
+  if (clearVoteBtn) {
+    clearVoteBtn.addEventListener("click", function () {
+      unvoteCard();
+    });
+  }
+
   function highlightSelectedDeckCard() {
     var cards = deckEl.querySelectorAll(".deck-card");
     var matchedPreset = false;
     cards.forEach(function (card) {
-      if (selectedVote !== null && card.dataset.value === selectedVote) {
+      if (selectedVote !== null && String(card.dataset.value) === String(selectedVote)) {
         card.classList.add("selected");
         matchedPreset = true;
       } else {
@@ -560,8 +645,13 @@
       customRow.classList.toggle("selected", isCustom);
       var customInput = customRow.querySelector(".deck-custom-input");
       if (customInput) {
-        customInput.placeholder = isCustom ? selectedVote : "Custom";
+        customInput.placeholder = isCustom ? selectedVote : "Custom…";
       }
+    }
+
+    if (clearVoteBtn) {
+      var isRevealed = latestState && latestState.revealed;
+      clearVoteBtn.classList.toggle("hidden", selectedVote === null || !!isRevealed);
     }
   }
 
@@ -689,6 +779,22 @@
     apiAction("clearHistory");
   });
 
+  if (syncStatusBtn) {
+    syncStatusBtn.addEventListener("click", function () {
+      triggerSync();
+      showToast("Room state synced ⚡", "success");
+    });
+  }
+
+  if (leaveRoomBtn) {
+    leaveRoomBtn.addEventListener("click", function () {
+      if (window.confirm("Leave the estimation room?")) {
+        apiAction("leave");
+        handleKicked("You left the room.");
+      }
+    });
+  }
+
   // ------------------------------------------------------------------
   // Rendering from `state`
   // ------------------------------------------------------------------
@@ -775,12 +881,12 @@
     // storeSelectedVote — so it survives a refresh; we only clear it once this
     // player actually has no vote in the current round.
     if (self && !state.revealed) {
-      // Only clear selectedVote if the user hasn't voted yet (selectedVote is null).
-      // If they already voted, preserve the local selection so the deck card stays highlighted
-      // until the round resets. The server has the authoritative vote state, and we don't
-      // want to wipe the UI highlight based on a hasVoted flag that may lag on the first poll.
-      if (selectedVote === null) {
-        storeSelectedVote(null);
+      if (!self.hasVoted) {
+        var now = Date.now();
+        // If a vote was not just cast in the last 1500ms, server says we haven't voted -> clear local selection
+        if (!window.__ppLastVoteTs || now - window.__ppLastVoteTs > 1500) {
+          storeSelectedVote(null);
+        }
       }
     }
     if (state.revealed && self) {
@@ -846,6 +952,9 @@
     // Round reset / new round: felt sweep.
     if (!state.revealed && lastRevealed) {
       triggerTableSettle();
+      storeSelectedVote(null);
+      highlightSelectedDeckCard();
+      votedPlayerIds = {};
     }
     lastRevealed = !!state.revealed;
   }
@@ -901,85 +1010,131 @@
     return avatar;
   }
 
+  // Update an existing player's card in place without tearing down the DOM node.
+  function updatePlayerCard(card, player, revealed, hostId, index, justVoted) {
+    card.dataset.playerId = player.id;
+    card.classList.toggle("is-self", player.id === selfId);
+    card.classList.toggle("is-spectator", !!player.isSpectator);
+    card.classList.toggle("is-voted", !player.isSpectator && !revealed && !!player.hasVoted);
+    card.classList.toggle("is-waiting", !player.isSpectator && !revealed && !player.hasVoted);
+
+    var avatar = card.querySelector(".player-avatar");
+    if (avatar) {
+      if (justVoted) {
+        avatar.classList.remove("just-voted");
+        void avatar.offsetWidth;
+        avatar.classList.add("just-voted");
+      } else {
+        avatar.classList.remove("just-voted");
+      }
+    }
+
+    var face = card.querySelector(".vote-chip");
+    if (face) {
+      face.className = "vote-chip";
+      face.style.animationDelay = "";
+      if (player.isSpectator) {
+        face.classList.add("is-eye");
+        face.textContent = "👁";
+      } else if (revealed) {
+        face.classList.add("is-value");
+        face.textContent =
+          player.vote !== null && player.vote !== undefined ? player.vote : "–";
+        if (player.hasVoted) {
+          face.classList.add("flip-in");
+          face.style.animationDelay = Math.min(index, 12) * 55 + "ms";
+        }
+      } else if (player.hasVoted) {
+        face.classList.add("is-back");
+        face.textContent = "";
+      } else {
+        face.classList.add("is-idle");
+        face.textContent = "";
+      }
+    }
+
+    var name = card.querySelector(".player-name");
+    if (name) {
+      name.textContent = player.name + (player.id === selfId ? " (you)" : "");
+    }
+
+    var existingBadge = card.querySelector(".host-badge");
+    var existingActions = card.querySelector(".player-actions");
+
+    if (player.id === hostId) {
+      if (existingActions) existingActions.remove();
+      if (!existingBadge) {
+        var hostBadge = document.createElement("span");
+        hostBadge.className = "host-badge";
+        hostBadge.textContent = "Host";
+        card.appendChild(hostBadge);
+      }
+    } else {
+      if (existingBadge) existingBadge.remove();
+      if (hostId === selfId) {
+        if (!existingActions) {
+          var actionsWrap = document.createElement("div");
+          actionsWrap.className = "player-actions";
+
+          var makeHostBtn = document.createElement("button");
+          makeHostBtn.type = "button";
+          makeHostBtn.className = "make-host-btn";
+          makeHostBtn.textContent = "Make host";
+          makeHostBtn.title = "Transfer host to " + player.name;
+          (function (targetId, targetName) {
+            makeHostBtn.addEventListener("click", function (e) {
+              e.stopPropagation();
+              if (window.confirm("Transfer host to " + targetName + "?")) {
+                apiAction("transferHost", { targetId: targetId });
+              }
+            });
+          })(player.id, player.name);
+          actionsWrap.appendChild(makeHostBtn);
+
+          var kickBtn = document.createElement("button");
+          kickBtn.type = "button";
+          kickBtn.className = "kick-btn";
+          kickBtn.textContent = "×";
+          kickBtn.title = "Remove " + player.name + " from the room";
+          (function (targetId, targetName) {
+            kickBtn.addEventListener("click", function (e) {
+              e.stopPropagation();
+              if (window.confirm("Remove " + targetName + " from the room?")) {
+                apiAction("kickPlayer", { targetId: targetId });
+              }
+            });
+          })(player.id, player.name);
+          actionsWrap.appendChild(kickBtn);
+
+          card.appendChild(actionsWrap);
+        }
+      } else {
+        if (existingActions) existingActions.remove();
+      }
+    }
+  }
+
   // Build one player's card (avatar + vote face + name + host controls).
   function buildPlayerCard(player, revealed, hostId, index, isNew, justVoted) {
     var card = document.createElement("div");
     card.className = "player-card";
+    card.dataset.playerId = player.id;
     if (isNew) {
       card.classList.add("deal-in");
     }
-    if (player.id === selfId) {
-      card.classList.add("is-self");
-    }
-    if (player.isSpectator) {
-      card.classList.add("is-spectator");
-    }
 
     var avatar = buildAvatar(player.name);
-    // Happy bounce the moment a player's vote lands.
-    if (justVoted) {
-      avatar.classList.add("just-voted");
-    }
     card.appendChild(avatar);
 
-    // Compact vote indicator (a small chip) instead of a full-size card face,
-    // so many seats fit without overflowing into the deck. State is conveyed by
-    // the chip + a ring on the card: 👁 spectator, ✓ voted (hidden), the value
-    // on reveal, and a faint empty chip while still deciding.
     var face = document.createElement("div");
     face.className = "vote-chip";
-
-    if (player.isSpectator) {
-      face.classList.add("is-eye");
-      face.textContent = "👁";
-    } else if (revealed) {
-      face.classList.add("is-value");
-      face.textContent =
-        player.vote !== null && player.vote !== undefined ? player.vote : "–";
-      // Staggered 3D flip as the votes come up (only for actual votes).
-      if (player.hasVoted) {
-        face.classList.add("flip-in");
-        face.style.animationDelay = Math.min(index, 12) * 55 + "ms";
-      }
-    } else if (player.hasVoted) {
-      card.classList.add("is-voted");
-      face.classList.add("is-back");
-    } else {
-      card.classList.add("is-waiting");
-      face.classList.add("is-idle");
-      face.textContent = "";
-    }
+    card.appendChild(face);
 
     var name = document.createElement("div");
     name.className = "player-name";
-    name.textContent = player.name + (player.id === selfId ? " (you)" : "");
-
-    card.appendChild(face);
     card.appendChild(name);
 
-    if (player.id === hostId) {
-      var hostBadge = document.createElement("span");
-      hostBadge.className = "host-badge";
-      hostBadge.textContent = "Host";
-      card.appendChild(hostBadge);
-    } else if (hostId === selfId) {
-      // Viewer is the host and this is someone else → offer to hand off the
-      // host role to them.
-      var makeHostBtn = document.createElement("button");
-      makeHostBtn.type = "button";
-      makeHostBtn.className = "make-host-btn";
-      makeHostBtn.textContent = "Make host";
-      makeHostBtn.title = "Transfer host to " + player.name;
-      (function (targetId, targetName) {
-        makeHostBtn.addEventListener("click", function () {
-          if (window.confirm("Transfer host to " + targetName + "?")) {
-            apiAction("transferHost", { targetId: targetId });
-          }
-        });
-      })(player.id, player.name);
-      card.appendChild(makeHostBtn);
-    }
-
+    updatePlayerCard(card, player, revealed, hostId, index, justVoted);
     return card;
   }
 
@@ -990,16 +1145,39 @@
     }
     lastPlayersSignature = signature;
 
-    clearChildren(playersGrid);
+    var currentCards = playersGrid.querySelectorAll(".player-card");
+    var existingCardMap = Object.create(null);
+    currentCards.forEach(function (c) {
+      if (c.dataset.playerId) {
+        existingCardMap[c.dataset.playerId] = c;
+      }
+    });
+
+    var incomingIds = Object.create(null);
 
     players.forEach(function (player, idx) {
+      incomingIds[player.id] = true;
       var isNew = !knownPlayerIds[player.id];
       if (isNew) knownPlayerIds[player.id] = true;
       var justVoted = !votedPlayerIds[player.id] && player.hasVoted;
       if (player.hasVoted) votedPlayerIds[player.id] = true;
-      playersGrid.appendChild(
-        buildPlayerCard(player, revealed, hostId, idx, isNew, justVoted)
-      );
+
+      var card = existingCardMap[player.id];
+      if (!card) {
+        card = buildPlayerCard(player, revealed, hostId, idx, isNew, justVoted);
+      } else {
+        updatePlayerCard(card, player, revealed, hostId, idx, justVoted);
+      }
+      playersGrid.appendChild(card);
+    });
+
+    currentCards.forEach(function (c) {
+      var pid = c.dataset.playerId;
+      if (pid && !incomingIds[pid]) {
+        c.remove();
+        delete knownPlayerIds[pid];
+        delete votedPlayerIds[pid];
+      }
     });
   }
 
