@@ -318,14 +318,13 @@
   // ------------------------------------------------------------------
   function flashSync() {
     if (syncStatusBtn) {
+      syncStatusBtn.classList.remove("is-synced");
+      void syncStatusBtn.offsetWidth; // force reflow so blink animation triggers cleanly
       syncStatusBtn.classList.add("is-synced");
-      var label = syncStatusBtn.querySelector(".sync-label");
-      if (label) label.textContent = "Synced ✓";
       syncStatusBtn.title = "Last synced at " + new Date().toLocaleTimeString();
       setTimeout(function () {
         syncStatusBtn.classList.remove("is-synced");
-        if (label) label.textContent = "Live";
-      }, 800);
+      }, 650);
     }
   }
 
@@ -452,6 +451,7 @@
         appRoot.classList.remove("hidden");
         setupInviteUrl();
         startPolling();
+        flashSync();
       } else if (data.error && data.error.indexOf("removed") !== -1) {
         handleKicked(data.error);
       }
