@@ -319,9 +319,13 @@
   function flashSync() {
     if (syncStatusBtn) {
       syncStatusBtn.classList.add("is-synced");
+      var label = syncStatusBtn.querySelector(".sync-label");
+      if (label) label.textContent = "Synced ✓";
+      syncStatusBtn.title = "Last synced at " + new Date().toLocaleTimeString();
       setTimeout(function () {
         syncStatusBtn.classList.remove("is-synced");
-      }, 500);
+        if (label) label.textContent = "Live";
+      }, 1200);
     }
   }
 
@@ -347,6 +351,7 @@
       window.sessionStorage.removeItem(PLAYER_ID_STORAGE_KEY + "." + roomId);
       window.sessionStorage.removeItem(SET_SELECTED_KEY);
     } catch (_) {}
+    document.documentElement.classList.remove("has-session");
     appRoot.classList.add("hidden");
     joinModal.classList.remove("hidden");
     showToast(msg || "You were removed from this room by the host.", "error");
@@ -442,6 +447,7 @@
         joinName = name;
         joinIsSpectator = isSpectator;
         saveJoin(name, isSpectator);
+        document.documentElement.classList.add("has-session");
         joinModal.classList.add("hidden");
         appRoot.classList.remove("hidden");
         setupInviteUrl();
@@ -474,28 +480,17 @@
   // without showing the modal. (sessionStorage survives reload but not close.)
   var resumed = loadJoin();
   if (resumed && resumed.name) {
+    document.documentElement.classList.add("has-session");
+    joinModal.classList.add("hidden");
+    appRoot.classList.remove("hidden");
     enterRoom(resumed.name, !!resumed.isSpectator);
   }
 
   // ------------------------------------------------------------------
-  // Auto-refresh page every 1 minute (preserves session and votes)
+  // Option B: Pure background sync every 1 minute (POLL_INTERVAL_MS).
+  // The app updates player cards, votes, and chat silently in place
+  // without disruptive full-page browser reloads.
   // ------------------------------------------------------------------
-  var AUTO_REFRESH_INTERVAL_MS = 60 * 1000;
-  setInterval(function () {
-    // Only auto-reload if the user is in the room
-    if (!hasJoined && !loadJoin()) {
-      return;
-    }
-    // Don't interrupt user if actively typing in an input or textarea
-    if (
-      document.activeElement &&
-      (document.activeElement.tagName === "INPUT" ||
-       document.activeElement.tagName === "TEXTAREA")
-    ) {
-      return;
-    }
-    window.location.reload();
-  }, AUTO_REFRESH_INTERVAL_MS);
 
   // ------------------------------------------------------------------
   // Invite URL + copy

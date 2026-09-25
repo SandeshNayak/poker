@@ -88,6 +88,15 @@ body::before {
   display: none !important;
 }
 
+/* When resuming an existing session, render app directly without modal flash */
+html.has-session #join-modal {
+  display: none !important;
+}
+
+html.has-session #app {
+  display: flex !important;
+}
+
 /* ------------------------------------------------------------------------
    Toasts
    ------------------------------------------------------------------------ */
@@ -1928,9 +1937,17 @@ body::before {
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
+.topbar-sync.is-synced {
+  border-color: #10b981;
+  background: #ecfdf5;
+  color: #065f46;
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.35);
+}
+
 .topbar-sync.is-synced .sync-dot {
-  transform: scale(1.35);
-  box-shadow: 0 0 0 6px rgba(16, 185, 129, 0.2);
+  transform: scale(1.6);
+  background: #059669;
+  box-shadow: 0 0 0 5px rgba(16, 185, 129, 0.35);
 }
 
 .player-actions {
