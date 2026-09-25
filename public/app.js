@@ -13,7 +13,7 @@
   ];
   var NAME_STORAGE_KEY = "planningPoker.name";
   var PLAYER_ID_STORAGE_KEY = "planningPoker.playerId";
-  var POLL_INTERVAL_MS = 15 * 1000; // auto-sync state every 15 seconds
+  var POLL_INTERVAL_MS = 60 * 1000; // auto-sync state every 1 minute
 
   // Emoji reactions everyone can send. Must stay in sync with the server-side
   // ALLOWED_REACTIONS allow-list in lib/store.js.
@@ -478,9 +478,9 @@
   }
 
   // ------------------------------------------------------------------
-  // Auto-refresh page every 15 seconds (preserves session and votes)
+  // Auto-refresh page every 1 minute (preserves session and votes)
   // ------------------------------------------------------------------
-  var AUTO_REFRESH_INTERVAL_MS = 15 * 1000;
+  var AUTO_REFRESH_INTERVAL_MS = 60 * 1000;
   setInterval(function () {
     // Only auto-reload if the user is in the room
     if (!hasJoined && !loadJoin()) {
